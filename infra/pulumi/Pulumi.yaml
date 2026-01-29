@@ -1,0 +1,3 @@
+name: whispa-aws
+runtime: dotnet
+description: Whispa AWS Infrastructure - Self-Hosting Deployment

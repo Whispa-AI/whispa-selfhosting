@@ -1,0 +1,135 @@
+name: Sync from Main Repo
+
+on:
+  repository_dispatch:
+    types: [whispa-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to sync (e.g., v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync Infrastructure Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout self-hosting repo
+        uses: actions/checkout@v4
+
+      - name: Checkout main whispa repo
+        uses: actions/checkout@v4
+        with:
+          repository: Whispa-AI/whispa
+          token: ${{ secrets.WHISPA_REPO_TOKEN }}
+          path: whispa-main
+          ref: ${{ github.event.client_payload.version || github.event.inputs.version }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            VERSION="${{ github.event.client_payload.version }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Syncing version: $VERSION"
+
+      - name: Sync Pulumi infrastructure
+        run: |
+          # Backup current example file
+          cp infra/pulumi/Pulumi.dev.yaml.example /tmp/Pulumi.dev.yaml.example.bak || true
+
+          # Remove old Pulumi code (except example config)
+          rm -rf infra/pulumi/Components infra/pulumi/Config infra/pulumi/Modules
+          rm -f infra/pulumi/Program.cs infra/pulumi/Whispa.Aws.Pulumi.csproj infra/pulumi/Pulumi.yaml
+
+          # Copy new Pulumi code
+          cp -r whispa-main/infra/Whispa.Aws.Pulumi/Components infra/pulumi/
+          cp -r whispa-main/infra/Whispa.Aws.Pulumi/Config infra/pulumi/
+          mkdir -p infra/pulumi/Modules
+          cp whispa-main/infra/Whispa.Aws.Pulumi/Program.cs infra/pulumi/
+          cp whispa-main/infra/Whispa.Aws.Pulumi/Whispa.Aws.Pulumi.csproj infra/pulumi/
+          cp whispa-main/infra/Whispa.Aws.Pulumi/Pulumi.yaml infra/pulumi/
+
+          # Update example config if it changed
+          if [ -f whispa-main/infra/Whispa.Aws.Pulumi/Pulumi.dev.yaml.example ]; then
+            cp whispa-main/infra/Whispa.Aws.Pulumi/Pulumi.dev.yaml.example infra/pulumi/
+          fi
+
+          # Remove any dev-specific files
+          rm -f infra/pulumi/Pulumi.dev.yaml
+          rm -rf infra/pulumi/bin infra/pulumi/obj
+
+      - name: Update version references
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Update README with new version
+          sed -i "s/Compatible with Whispa images: .*/Compatible with Whispa images: \`${VERSION}+\`/" README.md
+
+          # Update CHANGELOG if needed
+          if ! grep -q "## \[${VERSION#v}\]" CHANGELOG.md; then
+            # Add new version to changelog
+            DATE=$(date +%Y-%m-%d)
+            sed -i "/## \[Unreleased\]/a\\
+\\
+## [${VERSION#v}] - ${DATE}\\
+\\
+### Changed\\
+- Synced with Whispa ${VERSION}" CHANGELOG.md
+          fi
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync with whispa ${{ steps.version.outputs.version }}"
+            git push
+          fi
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body: |
+            ## Synced with Whispa ${{ steps.version.outputs.version }}
+
+            ### Docker Images
+
+            ```
+            ghcr.io/whispa-ai/whispa-backend:${{ steps.version.outputs.version }}
+            ghcr.io/whispa-ai/whispa-frontend:${{ steps.version.outputs.version }}
+            ```
+
+            ### Upgrade Instructions
+
+            ```bash
+            cd infra/pulumi
+            pulumi config set whispa:imageTag ${{ steps.version.outputs.version }}
+            pulumi up
+            ```
+
+            See [UPGRADES.md](docs/UPGRADES.md) for detailed instructions.
+
+            ### Full Release Notes
+
+            See the [Whispa release](${{ github.event.client_payload.release_url || format('https://github.com/Whispa-AI/whispa/releases/tag/{0}', steps.version.outputs.version) }}) for complete changelog.
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up
+        run: rm -rf whispa-main

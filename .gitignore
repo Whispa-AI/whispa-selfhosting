@@ -1,0 +1,33 @@
+# Pulumi
+infra/pulumi/bin/
+infra/pulumi/obj/
+infra/pulumi/Pulumi.*.yaml
+!infra/pulumi/Pulumi.yaml
+!infra/pulumi/Pulumi.*.yaml.example
+
+# .NET
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Secrets (never commit)
+*.pem
+*.key
+secrets/

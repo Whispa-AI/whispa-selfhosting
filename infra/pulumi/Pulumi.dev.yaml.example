@@ -1,0 +1,74 @@
+# Example Pulumi configuration for development environment
+# Copy this file to Pulumi.dev.yaml and fill in your values
+
+config:
+  # AWS Region
+  aws:region: ap-southeast-2
+
+  # ===================
+  # Required Settings
+  # ===================
+
+  # Domain name for the application
+  whispa:domainName: whispa-dev.yourdomain.com
+
+  # ACM certificate ARN (must be in the same region)
+  # Create this in AWS Console first: ACM > Request Certificate > DNS validation
+  whispa:certificateArn: arn:aws:acm:ap-southeast-2:123456789012:certificate/abc-123-def
+  # Alternatively, auto-provision ACM via Route53:
+  # whispa:autoCertificate: true
+  # whispa:hostedZoneId: Z0123456789ABCDEFGHIJ
+
+  # Verified SES sender email
+  # Verify in AWS Console: SES > Verified identities > Create identity
+  whispa:mailFrom: noreply@yourdomain.com
+
+  # Frontend URL (must match domainName with https://)
+  whispa:frontendUrl: https://whispa-dev.yourdomain.com
+
+  # Optional API domain (enables api.<domain> host-based routing)
+  # whispa:apiDomainName: api.whispa-dev.yourdomain.com
+
+  # LLM API key (set with: pulumi config set --secret whispa:llmApiKey YOUR_KEY)
+  # whispa:llmApiKey:
+  #   secure: AAABxxxxx...
+
+  # ===================
+  # Optional Settings
+  # ===================
+
+  # Route53 hosted zone ID (if you want automatic DNS setup)
+  # whispa:hostedZoneId: Z0123456789ABCDEFGHIJ
+
+  # Database settings (defaults are fine for dev)
+  # whispa:dbInstanceClass: db.t3.medium
+  # whispa:dbAllocatedStorage: 20
+  # whispa:dbMultiAz: false
+  # whispa:dbUsername: whispa_admin
+
+  # ECS settings (defaults are fine for dev)
+  # whispa:backendCpu: 512
+  # whispa:backendMemory: 1024
+  # whispa:frontendCpu: 256
+  # whispa:frontendMemory: 512
+  # whispa:desiredCount: 1
+
+  # Container images (use your own registry if needed)
+  # whispa:backendImage: ghcr.io/yourorg/whispa-backend:latest
+  # whispa:frontendImage: ghcr.io/yourorg/whispa-frontend:latest
+
+  # Transcription provider
+  # whispa:transcriptionProvider: elevenlabs
+
+  # Additional API keys (set with --secret flag)
+  # whispa:deepgramApiKey: (secret)
+  # whispa:elevenlabsApiKey: (secret)
+
+  # AWS Connect integration (disabled by default)
+  # whispa:enableAwsConnect: false
+  # whispa:connectInstanceId: your-connect-instance-id
+  # whispa:kvsStreamPrefix: whispa-connect
+
+  # Bootstrap admin user (optional; set password with --secret)
+  # whispa:superuserEmail: admin@example.com
+  # whispa:superuserPassword: (secret)
