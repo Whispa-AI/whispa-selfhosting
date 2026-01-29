@@ -198,9 +198,21 @@ public class WhispaConfig
     /// <summary>KVS stream name prefix (default: whispa-connect)</summary>
     public string KvsStreamPrefix => _config.Get("kvsStreamPrefix") ?? "whispa-connect";
 
+    /// <summary>API key for Connect Lambda to authenticate with Whispa backend (optional)</summary>
+    public string? ConnectApiKey => _config.Get("connectApiKey");
+
+    /// <summary>Deploy AWS Connect Lambda function via Pulumi (default: true when enableAwsConnect is true)</summary>
+    public bool DeployConnectLambda => _config.GetBoolean("deployConnectLambda") ?? EnableAwsConnect;
+
     // ===================
     // Resource Naming
     // ===================
+
+    /// <summary>
+    /// Custom resource prefix (e.g., "whispa-dev", "acme-prod").
+    /// If set, this is used directly instead of {projectName}-{environment}.
+    /// </summary>
+    public string? ResourcePrefix => _config.Get("resourcePrefix");
 
     /// <summary>Environment name used for resource naming (default: derived from stack name)</summary>
     public string Environment => _config.Get("environment") ?? Deployment.Instance.StackName;
@@ -208,6 +220,20 @@ public class WhispaConfig
     /// <summary>Project name prefix for resources (default: whispa)</summary>
     public string ProjectName => _config.Get("projectName") ?? "whispa";
 
-    /// <summary>Generate a resource name with project and environment prefix</summary>
-    public string ResourceName(string name) => $"{ProjectName}-{Environment}-{name}";
+    /// <summary>
+    /// Generate a resource name with appropriate prefix.
+    /// Uses resourcePrefix if set, otherwise {projectName}-{environment}-{name}.
+    /// </summary>
+    public string ResourceName(string name) =>
+        !string.IsNullOrWhiteSpace(ResourcePrefix)
+            ? $"{ResourcePrefix}-{name}"
+            : $"{ProjectName}-{Environment}-{name}";
+
+    /// <summary>
+    /// Get the effective prefix used for resources (for display/documentation).
+    /// </summary>
+    public string EffectivePrefix =>
+        !string.IsNullOrWhiteSpace(ResourcePrefix)
+            ? ResourcePrefix
+            : $"{ProjectName}-{Environment}";
 }

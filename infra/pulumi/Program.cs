@@ -97,6 +97,21 @@ return await Deployment.RunAsync(() =>
         albZoneId: compute.AlbZoneId);
 
     // ===================
+    // Phase 6: AWS Connect Lambda (Optional)
+    // ===================
+
+    LambdaStack? connectLambda = null;
+    if (config.DeployConnectLambda)
+    {
+        // Construct backend URL from API domain
+        var backendUrl = Output.Create($"https://{apiDomain}");
+
+        connectLambda = new LambdaStack("connect-lambda", config,
+            backendUrl: backendUrl,
+            apiKeySecretArn: secrets.ApiKeysSecretArn);
+    }
+
+    // ===================
     // Stack Outputs
     // ===================
 
@@ -129,6 +144,13 @@ return await Deployment.RunAsync(() =>
         // IAM
         ["taskExecutionRoleArn"] = iam.TaskExecutionRoleArn,
         ["taskRoleArn"] = iam.TaskRoleArn,
+
+        // AWS Connect Lambda (if deployed)
+        ["connectLambdaArn"] = connectLambda?.FunctionArn,
+        ["connectLambdaName"] = connectLambda?.FunctionName,
+
+        // Resource Naming
+        ["resourcePrefix"] = config.EffectivePrefix,
 
         // Instructions
         ["nextSteps"] = config.HostedZoneId == null

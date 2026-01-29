@@ -11,10 +11,24 @@ Configuration is set in your `Pulumi.<stack>.yaml` file.
 | Key | Description | Example |
 |-----|-------------|---------|
 | `aws:region` | AWS region for deployment | `us-east-1` |
-| `whispa:environment` | Environment name (used in resource naming) | `prod` |
-| `whispa:domain` | Your domain for Whispa | `whispa.company.com` |
-| `whispa:openRouterApiKey` | OpenRouter API key for LLM | (secret) |
-| `whispa:deepgramApiKey` | Deepgram API key for STT | (secret) |
+| `whispa:domainName` | Your domain for Whispa | `whispa.company.com` |
+| `whispa:frontendUrl` | Full frontend URL | `https://whispa.company.com` |
+| `whispa:mailFrom` | Verified SES sender email | `noreply@company.com` |
+| `whispa:llmApiKey` | OpenRouter/LLM API key | (secret) |
+
+### Resource Naming
+
+Control how AWS resources are named:
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:resourcePrefix` | (none) | Custom prefix for all resources (e.g., `whispa-dev`, `acme-prod`) |
+| `whispa:projectName` | `whispa` | Project name (used if resourcePrefix not set) |
+| `whispa:environment` | Stack name | Environment name (used if resourcePrefix not set) |
+
+**Resource naming behavior:**
+- If `resourcePrefix` is set: `{resourcePrefix}-{resourceType}` (e.g., `whispa-dev-ecs-task`)
+- If not set: `{projectName}-{environment}-{resourceType}` (e.g., `whispa-prod-ecs-task`)
 
 ### Networking
 
@@ -84,9 +98,28 @@ Configuration is set in your `Pulumi.<stack>.yaml` file.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:showSignupCta` | `true` | Show signup CTA on landing page |
+| `whispa:showSignupCta` | `false` | Show signup CTA on landing page |
 | `whispa:piiScrubEnabled` | `true` | Enable PII scrubbing |
 | `whispa:piiScrubBeforeDatabase` | `true` | Scrub PII before database storage |
+
+### AWS Connect Integration
+
+Enable Amazon Connect integration for real-time call transcription:
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:enableAwsConnect` | `false` | Enable AWS Connect integration |
+| `whispa:connectInstanceId` | (none) | AWS Connect instance ID (required if enabled) |
+| `whispa:kvsStreamPrefix` | `whispa-connect` | KVS stream name prefix |
+| `whispa:deployConnectLambda` | Same as enableAwsConnect | Deploy the Connect Lambda via Pulumi |
+| `whispa:connectApiKey` | (none) | API key for Lambda-to-backend auth |
+
+When `enableAwsConnect` is true, Pulumi will:
+1. Add KVS and Connect API permissions to the ECS task role
+2. Deploy a Lambda function for Contact Flow integration
+3. Configure the Lambda to forward call events to Whispa
+
+See `infrastructure/aws-connect-lambda/README.md` for Contact Flow setup instructions.
 
 ## Environment Variables
 
@@ -165,20 +198,39 @@ config:
 ```yaml
 config:
   aws:region: us-east-1
-  whispa:environment: staging
-  whispa:domain: staging.whispa.company.com
+  whispa:resourcePrefix: whispa-staging  # All resources prefixed with "whispa-staging-"
+  whispa:domainName: staging.whispa.company.com
+  whispa:frontendUrl: https://staging.whispa.company.com
 
   # Minimal resources
   whispa:dbInstanceClass: db.t3.micro
   whispa:backendCpu: "256"
   whispa:backendMemory: "512"
 
-  # Disable some features for cost
-  whispa:createNatGateway: "false"  # Use VPC endpoints instead
-
-  whispa:openRouterApiKey:
+  whispa:llmApiKey:
     secure: v1:xxx...
   whispa:deepgramApiKey:
+    secure: v1:xxx...
+```
+
+### With AWS Connect
+
+```yaml
+config:
+  aws:region: ap-southeast-2
+  whispa:resourcePrefix: acme-prod
+  whispa:domainName: whispa.acme.com
+  whispa:frontendUrl: https://whispa.acme.com
+  whispa:mailFrom: noreply@acme.com
+
+  # AWS Connect integration
+  whispa:enableAwsConnect: "true"
+  whispa:connectInstanceId: "a1b2c3d4-5678-90ab-cdef-EXAMPLE11111"
+  whispa:kvsStreamPrefix: "acme-connect"  # Must match Connect instance stream prefix
+
+  whispa:llmApiKey:
+    secure: v1:xxx...
+  whispa:elevenlabsApiKey:
     secure: v1:xxx...
 ```
 
