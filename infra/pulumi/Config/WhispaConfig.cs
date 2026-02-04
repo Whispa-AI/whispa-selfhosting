@@ -76,11 +76,11 @@ public class WhispaConfig
     // ECS Configuration
     // ===================
 
-    /// <summary>Backend container image (default: ghcr.io/whispa/whispa-backend:latest)</summary>
-    public string BackendImage => _config.Get("backendImage") ?? "ghcr.io/whispa/whispa-backend:latest";
+    /// <summary>Backend container image (default: ghcr.io/whispa-ai/whispa-backend:latest)</summary>
+    public string BackendImage => _config.Get("backendImage") ?? "ghcr.io/whispa-ai/whispa-backend:latest";
 
-    /// <summary>Frontend container image (default: ghcr.io/whispa/whispa-frontend:latest)</summary>
-    public string FrontendImage => _config.Get("frontendImage") ?? "ghcr.io/whispa/whispa-frontend:latest";
+    /// <summary>Frontend container image (default: ghcr.io/whispa-ai/whispa-frontend:latest)</summary>
+    public string FrontendImage => _config.Get("frontendImage") ?? "ghcr.io/whispa-ai/whispa-frontend:latest";
 
     /// <summary>Backend CPU units (default: 512 = 0.5 vCPU)</summary>
     public int BackendCpu => _config.GetInt32("backendCpu") ?? 512;
@@ -189,8 +189,8 @@ public class WhispaConfig
     // AWS Connect Integration (Optional)
     // ===================
 
-    /// <summary>Enable AWS Connect integration (default: false)</summary>
-    public bool EnableAwsConnect => _config.GetBoolean("enableAwsConnect") ?? false;
+    /// <summary>Enable AWS Connect integration (auto-enabled if connectInstanceId is set)</summary>
+    public bool EnableAwsConnect => _config.GetBoolean("enableAwsConnect") ?? !string.IsNullOrWhiteSpace(ConnectInstanceId);
 
     /// <summary>AWS Connect instance ID (required if enableAwsConnect is true)</summary>
     public string? ConnectInstanceId => _config.Get("connectInstanceId");

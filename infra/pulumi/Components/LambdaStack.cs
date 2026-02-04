@@ -6,6 +6,7 @@ using Pulumi;
 using Pulumi.Aws;
 using Pulumi.Aws.Iam;
 using Pulumi.Aws.Lambda;
+using Pulumi.Aws.Lambda.Inputs;
 using Whispa.Aws.Pulumi.Configuration;
 
 namespace Whispa.Aws.Pulumi.Components;
@@ -134,7 +135,7 @@ public class LambdaStack : ComponentResource
 
         new Permission($"{name}-connect-permission", new PermissionArgs
         {
-            FunctionName = lambda.Name,
+            Function = lambda.Name,
             Action = "lambda:InvokeFunction",
             Principal = "connect.amazonaws.com",
             SourceAccount = accountId,
@@ -144,8 +145,8 @@ public class LambdaStack : ComponentResource
         FunctionArn = lambda.Arn;
         FunctionName = lambda.Name;
 
-        // Clean up temp file
-        try { File.Delete(zipPath); } catch { /* ignore */ }
+        // Note: Don't delete the temp zip file here - Pulumi reads it asynchronously.
+        // The OS will clean up temp files eventually.
 
         RegisterOutputs();
     }

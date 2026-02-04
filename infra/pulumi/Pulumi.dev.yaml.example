@@ -53,16 +53,17 @@ config:
   # whispa:frontendMemory: 512
   # whispa:desiredCount: 1
 
-  # Container images (use your own registry if needed)
-  # whispa:backendImage: ghcr.io/yourorg/whispa-backend:latest
-  # whispa:frontendImage: ghcr.io/yourorg/whispa-frontend:latest
+  # Container images (defaults to Whispa's public GHCR)
+  # whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:latest
+  # whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:latest
 
-  # Transcription provider
-  # whispa:transcriptionProvider: elevenlabs
+  # Transcription provider: amazon (recommended), deepgram, or elevenlabs
+  # Amazon Transcribe uses IAM role - no API key needed
+  whispa:transcriptionProvider: amazon
 
-  # Additional API keys (set with --secret flag)
-  # whispa:deepgramApiKey: (secret)
-  # whispa:elevenlabsApiKey: (secret)
+  # Additional API keys (only if NOT using Amazon Transcribe)
+  # whispa:deepgramApiKey: (secret)     # If transcriptionProvider: deepgram
+  # whispa:elevenlabsApiKey: (secret)   # If transcriptionProvider: elevenlabs
 
   # AWS Connect integration (disabled by default)
   # whispa:enableAwsConnect: false

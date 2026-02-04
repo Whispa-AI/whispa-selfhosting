@@ -161,16 +161,21 @@ pulumi login --local
 pulumi login s3://your-pulumi-state-bucket
 ```
 
-## API Keys (Optional)
+## API Keys & Services
 
 Depending on your configuration, you may need:
 
 | Service | Purpose | Required? |
 |---------|---------|-----------|
 | OpenRouter / OpenAI | LLM for call analysis | Yes |
-| Deepgram / ElevenLabs | Speech-to-text | Yes (one of them) |
+| **Speech-to-text** (choose one): | | |
+| ↳ AWS Transcribe | Uses IAM role, no API key needed | Recommended for AWS |
+| ↳ Deepgram | External STT provider | Alternative |
+| ↳ ElevenLabs | External STT provider | Alternative |
 | Sentry | Error tracking | No |
 | Langfuse | LLM observability | No |
+
+**Note:** AWS Transcribe is recommended for self-hosting on AWS since it uses your ECS task role for authentication — no external API keys to manage.
 
 ## Checklist
 
@@ -182,7 +187,7 @@ Before proceeding to deployment, confirm:
 - [ ] AWS account with sufficient permissions
 - [ ] Domain name available
 - [ ] OpenRouter/OpenAI API key obtained
-- [ ] Deepgram or ElevenLabs API key obtained
+- [ ] Speech-to-text ready: AWS Transcribe (no key needed) OR Deepgram/ElevenLabs API key
 
 ## Next Steps
 

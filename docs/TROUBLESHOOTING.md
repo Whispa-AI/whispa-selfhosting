@@ -75,6 +75,33 @@ aws logs tail /ecs/whispa-prod-backend --follow
    psql -h <rds-endpoint> -U whispa -d whispa
    ```
 
+### Secrets Already Scheduled for Deletion
+
+**Symptom**: `pulumi up` fails with "secret is already scheduled for deletion"
+
+**Cause**: Previous deployment attempt created secrets that were deleted but are in the 30-day recovery window
+
+**Solution**: Force delete the secrets immediately:
+
+```bash
+aws secretsmanager delete-secret \
+  --secret-id whispa/prod/app-secrets \
+  --force-delete-without-recovery \
+  --region ap-southeast-2
+
+aws secretsmanager delete-secret \
+  --secret-id whispa/prod/api-keys \
+  --force-delete-without-recovery \
+  --region ap-southeast-2
+
+aws secretsmanager delete-secret \
+  --secret-id whispa/prod/database-password \
+  --force-delete-without-recovery \
+  --region ap-southeast-2
+```
+
+Then run `pulumi up` again.
+
 ### NAT Gateway Errors
 
 **Symptom**: Tasks can't reach external APIs (OpenRouter, Deepgram)
@@ -92,6 +119,28 @@ aws ec2 describe-route-tables --filters "Name=vpc-id,Values=vpc-xxx"
 
 ## Runtime Issues
 
+### CSRF Token Errors
+
+**Symptom**: "CSRF token invalid" or "CSRF token missing" errors when making API calls
+
+**Common causes**:
+
+1. **Multiple browser tabs open**
+   - One tab gets a new CSRF token, other tabs have stale cached tokens
+   - **Fix**: Refresh the affected tab, or run in browser console:
+     ```javascript
+     localStorage.removeItem('whispa.csrf_token');
+     location.reload();
+     ```
+
+2. **Cookie not being set**
+   - Check browser DevTools → Application → Cookies for `csrf_token`
+   - Ensure your domain is using HTTPS (required for secure cookies)
+
+3. **Cross-origin issues**
+   - If frontend and API are on different domains, cookies may not be shared
+   - Ensure CORS is configured correctly
+
 ### LLM API Errors
 
 **Symptom**: Call analysis fails, logs show OpenRouter/LLM errors
@@ -106,6 +155,36 @@ aws ec2 describe-route-tables --filters "Name=vpc-id,Values=vpc-xxx"
 curl https://openrouter.ai/api/v1/models \
   -H "Authorization: Bearer $OPENROUTER_API_KEY"
 ```
+
+### AWS Connect Permission Errors
+
+**Symptom**: "AccessDeniedException: User is not authorized to perform: connect:ListUsers" or missing KVS permissions
+
+**Cause**: AWS Connect integration not enabled or ECS task not restarted after config change
+
+**Solution**:
+
+1. **Set Connect instance ID** (this auto-enables all Connect permissions):
+   ```bash
+   pulumi config set whispa:connectInstanceId "your-connect-instance-id"
+   pulumi up
+   ```
+
+2. **Restart the backend** to pick up new IAM permissions:
+   ```bash
+   aws ecs update-service \
+     --cluster whispa-prod \
+     --service whispa-prod-backend \
+     --force-new-deployment \
+     --region ap-southeast-2
+   ```
+
+3. **Verify IAM policies** were created:
+   ```bash
+   aws iam list-role-policies --role-name whispa-prod-ecs-task
+   ```
+
+   You should see `iam-task-connect` and `iam-task-kvs` in the list.
 
 ### Speech-to-Text Issues
 
@@ -223,9 +302,34 @@ aws ecs execute-command \
 **Cause**: Can't pull image from registry
 
 **Solutions**:
-1. Verify image exists: `docker pull ghcr.io/whispa-ai/whispa-backend:v1.0.0`
-2. Check registry credentials if private
-3. Ensure NAT gateway/VPC endpoints allow outbound traffic
+
+1. **Verify image exists**:
+   ```bash
+   docker pull ghcr.io/whispa-ai/whispa-backend:latest
+   ```
+
+2. **Check if images are public**: Go to https://github.com/orgs/Whispa-AI/packages and ensure packages have public visibility
+
+3. **Build and push your own images** (if needed):
+   ```bash
+   # Login to GHCR
+   echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+   # Build for linux/amd64 (required for ECS Fargate)
+   docker build --platform linux/amd64 -t ghcr.io/your-org/whispa-backend:latest ./backend
+   docker build --platform linux/amd64 -t ghcr.io/your-org/whispa-frontend:latest ./frontend
+
+   # Push
+   docker push ghcr.io/your-org/whispa-backend:latest
+   docker push ghcr.io/your-org/whispa-frontend:latest
+
+   # Update Pulumi config
+   pulumi config set whispa:backendImage "ghcr.io/your-org/whispa-backend:latest"
+   pulumi config set whispa:frontendImage "ghcr.io/your-org/whispa-frontend:latest"
+   pulumi up
+   ```
+
+4. **Ensure NAT gateway allows outbound traffic** to ghcr.io
 
 ### "Connection timed out" to external APIs
 

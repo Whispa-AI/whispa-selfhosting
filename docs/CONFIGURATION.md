@@ -83,11 +83,22 @@ Control how AWS resources are named:
 | `whispa:s3LifecycleTransitionDays` | `30` | Days before moving to IA storage |
 | `whispa:s3LifecycleGlacierDays` | `90` | Days before moving to Glacier |
 
+### Speech-to-Text Configuration
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:transcriptionProvider` | `elevenlabs` | Provider: `amazon`, `deepgram`, or `elevenlabs` |
+
+**Provider details:**
+- `amazon` (recommended for AWS): Uses AWS Transcribe via IAM role — no API key needed
+- `deepgram`: Requires `whispa:deepgramApiKey`
+- `elevenlabs`: Requires `whispa:elevenlabsApiKey`
+
 ### API Keys & Integrations
 
 | Key | Description | Required |
 |-----|-------------|----------|
-| `whispa:openRouterApiKey` | OpenRouter API key | Yes |
+| `whispa:llmApiKey` | OpenRouter/LLM API key | Yes |
 | `whispa:deepgramApiKey` | Deepgram STT API key | If using Deepgram |
 | `whispa:elevenlabsApiKey` | ElevenLabs STT API key | If using ElevenLabs |
 | `whispa:sentryDsn` | Sentry error tracking DSN | No |
@@ -104,20 +115,38 @@ Control how AWS resources are named:
 
 ### AWS Connect Integration
 
-Enable Amazon Connect integration for real-time call transcription:
+Enable Amazon Connect integration for real-time call transcription from your contact center.
+
+**Quick setup — just set your Connect instance ID:**
+
+```bash
+pulumi config set whispa:connectInstanceId "your-connect-instance-id"
+pulumi up
+```
+
+This automatically:
+- Adds KVS permissions (kinesisvideo:GetMedia, GetDataEndpoint, ListStreams)
+- Adds Connect API permissions (connect:ListUsers, DescribeUser, etc.)
+- Adds Transcribe permissions for real-time STT
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:enableAwsConnect` | `false` | Enable AWS Connect integration |
-| `whispa:connectInstanceId` | (none) | AWS Connect instance ID (required if enabled) |
-| `whispa:kvsStreamPrefix` | `whispa-connect` | KVS stream name prefix |
+| `whispa:connectInstanceId` | (none) | AWS Connect instance ID — **setting this enables all Connect permissions** |
+| `whispa:kvsStreamPrefix` | `whispa-connect` | KVS stream name prefix (must match your Connect instance) |
+| `whispa:enableAwsConnect` | Auto | Explicitly enable/disable (auto-enabled when connectInstanceId is set) |
 | `whispa:deployConnectLambda` | Same as enableAwsConnect | Deploy the Connect Lambda via Pulumi |
 | `whispa:connectApiKey` | (none) | API key for Lambda-to-backend auth |
 
-When `enableAwsConnect` is true, Pulumi will:
-1. Add KVS and Connect API permissions to the ECS task role
-2. Deploy a Lambda function for Contact Flow integration
-3. Configure the Lambda to forward call events to Whispa
+**Finding your Connect Instance ID:**
+
+1. Go to AWS Console → Amazon Connect → Your instance
+2. Copy the Instance ID from the ARN: `arn:aws:connect:region:account:instance/<INSTANCE-ID>`
+
+**After updating config**, restart the backend to pick up new IAM permissions:
+
+```bash
+aws ecs update-service --cluster whispa-prod --service whispa-prod-backend --force-new-deployment
+```
 
 See `infrastructure/aws-connect-lambda/README.md` for Contact Flow setup instructions.
 

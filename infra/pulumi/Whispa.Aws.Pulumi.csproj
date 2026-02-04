@@ -8,9 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Pulumi" Version="3.*" />
-    <PackageReference Include="Pulumi.Aws" Version="6.*" />
-    <PackageReference Include="Pulumi.Random" Version="4.*" />
+    <!-- Pin versions to avoid breaking changes from wildcard updates -->
+    <PackageReference Include="Pulumi" Version="3.98.0" />
+    <PackageReference Include="Pulumi.Aws" Version="6.83.2" />
+    <PackageReference Include="Pulumi.Random" Version="4.19.1" />
   </ItemGroup>
 
 </Project>

@@ -24,6 +24,9 @@ Before you begin, ensure you have:
 - [ ] [Pulumi CLI](https://www.pulumi.com/docs/install/) installed
 - [ ] [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) installed
 - [ ] AWS CLI configured with credentials
+- [ ] An LLM API key (OpenRouter recommended)
+
+**Speech-to-text:** AWS Transcribe is recommended (uses IAM role, no API key needed). Alternatively, you can use Deepgram or ElevenLabs.
 
 See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
 
@@ -100,8 +103,12 @@ Key configuration options in your Pulumi stack file:
 
 ```yaml
 config:
-  whispa:environment: prod
-  whispa:domain: whispa.yourcompany.com
+  aws:region: ap-southeast-2
+  whispa:domainName: whispa.yourcompany.com
+  whispa:frontendUrl: https://whispa.yourcompany.com
+  whispa:apiDomainName: api.whispa.yourcompany.com
+  whispa:transcriptionProvider: amazon  # Uses AWS Transcribe (recommended)
+  whispa:hostedZoneId: Z0123456789ABC   # Route53 for automatic DNS
   whispa:dbInstanceClass: db.t3.small
   whispa:backendCpu: 512
   whispa:backendMemory: 1024
