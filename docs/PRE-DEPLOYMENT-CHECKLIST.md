@@ -17,16 +17,21 @@ Complete these items **before** your scheduled deployment session. This ensures 
 | Item | Details | Status |
 |------|---------|--------|
 | Domain Name | The domain where Whispa will be hosted (e.g., `whispa.yourcompany.com`) | ☐ |
-| DNS Access | Ability to add DNS records at your DNS provider | ☐ |
+| DNS Access | Ability to add DNS records at your DNS provider during the call | ☐ |
 | Subdomain Decision | Whether to use a subdomain (recommended) or root domain | ☐ |
 
-**If using Route53 (recommended):**
-- We'll create a hosted zone and you'll add NS records at your DNS provider
-- This enables automatic SSL certificate validation
+**During deployment, you'll need to add these DNS records:**
 
-**If NOT using Route53:**
-- You'll need to manually add DNS validation records for SSL certificates
-- Certificate validation can take up to 30 minutes
+| Type | Name | Purpose |
+|------|------|---------|
+| CNAME | `_acme-challenge.whispa` | SSL certificate validation |
+| CNAME | `_acme-challenge.api.whispa` | SSL certificate validation (API) |
+| A/CNAME | `whispa` | Points to the load balancer |
+| A/CNAME | `api.whispa` | Points to the load balancer (API) |
+
+*Exact values will be provided during deployment.*
+
+**Important:** Have your DNS provider login ready during the deployment call. Certificate validation requires DNS records and can take 5-30 minutes to propagate.
 
 ### 3. Email (for notifications)
 
