@@ -43,7 +43,9 @@ Complete these items **before** your scheduled deployment session. This ensures 
    ```
    You should see the AWS nameservers in the response.
 
-This delegation allows automatic SSL certificate validation and DNS record creation during deployment.
+This delegation enables:
+- **Automatic SSL certificate** creation and validation (no manual certificate setup needed)
+- **Automatic DNS records** pointing to the load balancer
 
 ### 3. Email (for notifications)
 
