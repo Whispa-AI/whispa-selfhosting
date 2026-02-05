@@ -42,10 +42,9 @@ Control how AWS resources are named:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:dbInstanceClass` | `db.t3.small` | RDS instance type |
+| `whispa:dbInstanceClass` | `db.t3.medium` | RDS instance type |
 | `whispa:dbAllocatedStorage` | `20` | Storage in GB |
-| `whispa:dbMaxAllocatedStorage` | `100` | Max storage for autoscaling |
-| `whispa:dbBackupRetentionPeriod` | `7` | Backup retention in days |
+| `whispa:dbBackupRetentionDays` | `7` | Backup retention in days |
 | `whispa:dbMultiAz` | `false` | Enable Multi-AZ (production recommended) |
 
 ### Compute (ECS Fargate)
@@ -54,10 +53,9 @@ Control how AWS resources are named:
 |-----|---------|-------------|
 | `whispa:backendCpu` | `512` | Backend CPU units (256, 512, 1024, 2048, 4096) |
 | `whispa:backendMemory` | `1024` | Backend memory in MB |
-| `whispa:backendDesiredCount` | `1` | Number of backend tasks |
 | `whispa:frontendCpu` | `256` | Frontend CPU units |
 | `whispa:frontendMemory` | `512` | Frontend memory in MB |
-| `whispa:frontendDesiredCount` | `1` | Number of frontend tasks |
+| `whispa:desiredCount` | `1` | Number of task replicas (applies to both backend and frontend) |
 
 ### Container Images
 
@@ -65,15 +63,15 @@ Control how AWS resources are named:
 |-----|---------|-------------|
 | `whispa:backendImage` | `ghcr.io/whispa-ai/whispa-backend:latest` | Backend container image |
 | `whispa:frontendImage` | `ghcr.io/whispa-ai/whispa-frontend:latest` | Frontend container image |
-| `whispa:imageTag` | `latest` | Override image tag for both |
 
 ### DNS & SSL
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:route53ZoneId` | (none) | Route 53 hosted zone ID for automatic DNS |
-| `whispa:createWildcardCert` | `true` | Create wildcard SSL certificate |
-| `whispa:apiSubdomain` | `api` | Subdomain for backend API |
+| `whispa:hostedZoneId` | (none) | Route 53 hosted zone ID for automatic DNS and certificate provisioning |
+| `whispa:autoCertificate` | `false` | Automatically request and validate ACM certificate via Route 53 (requires `hostedZoneId`) |
+| `whispa:certificateArn` | (none) | ACM certificate ARN (alternative to auto-provisioning) |
+| `whispa:apiDomainName` | (none) | API domain name (e.g., `api.whispa.company.com`) |
 
 ### Storage (S3)
 
@@ -174,7 +172,7 @@ These environment variables are automatically set from Pulumi configuration. You
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Backend API URL |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend API URL |
 | `NEXT_PUBLIC_SENTRY_DSN` | Frontend Sentry DSN |
 
 ## Example Configurations
@@ -185,11 +183,12 @@ These environment variables are automatically set from Pulumi configuration. You
 config:
   aws:region: us-east-1
   whispa:environment: prod
-  whispa:domain: whispa.company.com
-  whispa:route53ZoneId: Z1234567890ABC
-  whispa:openRouterApiKey:
-    secure: v1:xxx...
-  whispa:deepgramApiKey:
+  whispa:domainName: whispa.company.com
+  whispa:frontendUrl: https://whispa.company.com
+  whispa:mailFrom: noreply@company.com
+  whispa:hostedZoneId: Z1234567890ABC
+  whispa:transcriptionProvider: amazon
+  whispa:llmApiKey:
     secure: v1:xxx...
 ```
 
@@ -199,24 +198,24 @@ config:
 config:
   aws:region: us-east-1
   whispa:environment: prod
-  whispa:domain: whispa.company.com
-  whispa:route53ZoneId: Z1234567890ABC
+  whispa:domainName: whispa.company.com
+  whispa:frontendUrl: https://whispa.company.com
+  whispa:mailFrom: noreply@company.com
+  whispa:hostedZoneId: Z1234567890ABC
+  whispa:transcriptionProvider: amazon
 
   # Multi-AZ database
   whispa:dbInstanceClass: db.t3.medium
   whispa:dbMultiAz: "true"
-  whispa:dbBackupRetentionPeriod: "30"
+  whispa:dbBackupRetentionDays: "30"
 
   # Scaled compute
   whispa:backendCpu: "1024"
   whispa:backendMemory: "2048"
-  whispa:backendDesiredCount: "2"
-  whispa:frontendDesiredCount: "2"
+  whispa:desiredCount: "2"
 
   # API keys
-  whispa:openRouterApiKey:
-    secure: v1:xxx...
-  whispa:deepgramApiKey:
+  whispa:llmApiKey:
     secure: v1:xxx...
   whispa:sentryDsn:
     secure: v1:xxx...
@@ -269,13 +268,13 @@ Use Pulumi's secret management for sensitive values:
 
 ```bash
 # Set a secret
-pulumi config set --secret whispa:openRouterApiKey "sk-or-xxx..."
+pulumi config set --secret whispa:llmApiKey "sk-or-xxx..."
 
 # View config (secrets are encrypted)
 pulumi config
 
 # Get a specific value
-pulumi config get whispa:domain
+pulumi config get whispa:domainName
 ```
 
 ## Updating Configuration
@@ -284,7 +283,7 @@ To update configuration after deployment:
 
 ```bash
 # Change a value
-pulumi config set whispa:backendDesiredCount 2
+pulumi config set whispa:desiredCount 2
 
 # Apply the change
 pulumi up

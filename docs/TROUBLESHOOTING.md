@@ -16,7 +16,7 @@ Common issues and their solutions when deploying and running Whispa.
 3. Wait up to 30 minutes for propagation
 4. Verify records: `dig _acme-challenge.yourdomain.com CNAME`
 
-If using Route 53 with `route53ZoneId`, this should be automatic.
+If using Route 53 with `hostedZoneId`, this should be automatic.
 
 ### ECS Tasks Failing to Start
 
@@ -218,7 +218,7 @@ curl -X POST 'https://api.deepgram.com/v1/listen' \
 
 2. **Add more tasks**:
    ```bash
-   pulumi config set whispa:backendDesiredCount 2
+   pulumi config set whispa:desiredCount 2
    pulumi up
    ```
 

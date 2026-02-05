@@ -52,7 +52,7 @@ All sensitive credentials are stored in AWS Secrets Manager:
 
 ```bash
 # Set secrets (encrypted in Pulumi state)
-pulumi config set --secret whispa:openRouterApiKey "sk-or-..."
+pulumi config set --secret whispa:llmApiKey "sk-or-..."
 pulumi config set --secret whispa:deepgramApiKey "..."
 
 # View config (secrets are masked)

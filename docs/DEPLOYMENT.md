@@ -314,7 +314,7 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more solutions.
 After initial deployment, you can update configuration:
 
 ```bash
-pulumi config set whispa:backendDesiredCount 2
+pulumi config set whispa:desiredCount 2
 pulumi up
 ```
 

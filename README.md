@@ -109,7 +109,7 @@ config:
   whispa:apiDomainName: api.whispa.yourcompany.com
   whispa:transcriptionProvider: amazon  # Uses AWS Transcribe (recommended)
   whispa:hostedZoneId: Z0123456789ABC   # Route53 for automatic DNS
-  whispa:dbInstanceClass: db.t3.small
+  whispa:dbInstanceClass: db.t3.medium
   whispa:backendCpu: 512
   whispa:backendMemory: 1024
 ```
