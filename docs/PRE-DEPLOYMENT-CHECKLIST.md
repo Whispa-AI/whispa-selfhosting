@@ -12,33 +12,45 @@ Complete these items **before** your scheduled deployment session. This ensures 
 | Admin Access | IAM user/role with AdministratorAccess | `aws sts get-caller-identity` returns your account |
 | Region Selected | Choose deployment region (e.g., `ap-southeast-2`) | Note your preferred region |
 
-### 2. Domain & DNS
+### 2. Domain & DNS Setup
 
-| Item | Details | Status |
-|------|---------|--------|
-| Domain Name | The domain where Whispa will be hosted (e.g., `whispa.yourcompany.com`) | ☐ |
-| DNS Access | Ability to add DNS records at your DNS provider during the call | ☐ |
-| Subdomain Decision | Whether to use a subdomain (recommended) or root domain | ☐ |
+| Item | Status |
+|------|--------|
+| Subdomain decided (e.g., `clientname.whispa.net`) | ☐ |
+| Route53 hosted zone created | ☐ |
+| NS records added at your DNS provider | ☐ |
+| NS records propagated (verify with `dig NS clientname.whispa.net`) | ☐ |
 
-**During deployment, you'll need to add these DNS records:**
+**Setup steps:**
 
-| Type | Name | Purpose |
-|------|------|---------|
-| CNAME | `_acme-challenge.whispa` | SSL certificate validation |
-| CNAME | `_acme-challenge.api.whispa` | SSL certificate validation (API) |
-| A/CNAME | `whispa` | Points to the load balancer |
-| A/CNAME | `api.whispa` | Points to the load balancer (API) |
+1. **Create Route53 hosted zone** (AWS Console → Route53 → Hosted zones → Create):
+   - Enter your chosen subdomain (e.g., `clientname.whispa.net`)
+   - Note the **Hosted Zone ID** (e.g., `Z0123456789ABC`)
 
-*Exact values will be provided during deployment.*
+2. **Copy the 4 NS records** shown in the hosted zone (e.g., `ns-123.awsdns-12.com`)
 
-**Important:** Have your DNS provider login ready during the deployment call. Certificate validation requires DNS records and can take 5-30 minutes to propagate.
+3. **Add NS records at your DNS provider** (GoDaddy, Cloudflare, etc.):
+   | Type | Name | Value |
+   |------|------|-------|
+   | NS | clientname | ns-123.awsdns-12.com |
+   | NS | clientname | ns-456.awsdns-34.net |
+   | NS | clientname | ns-789.awsdns-56.org |
+   | NS | clientname | ns-012.awsdns-78.co.uk |
+
+4. **Verify propagation** (can take 5-60 minutes):
+   ```bash
+   dig NS clientname.whispa.net
+   ```
+   You should see the AWS nameservers in the response.
+
+This delegation allows automatic SSL certificate validation and DNS record creation during deployment.
 
 ### 3. Email (for notifications)
 
-| Item | Details | Status |
-|------|---------|--------|
-| Sender Email | Email address for system notifications (e.g., `noreply@yourcompany.com`) | ☐ |
-| SES Verification | Verify this email in AWS SES before deployment | ☐ |
+| Item | Status |
+|------|--------|
+| Sender email decided (e.g., `noreply@clientname.whispa.net`) | ☐ |
+| Email verified in AWS SES | ☐ |
 
 **To verify email in SES:**
 1. AWS Console → SES → Verified Identities → Create Identity
@@ -75,11 +87,11 @@ You need at least one LLM provider configured. OpenRouter is recommended as it p
 
 ### Speech-to-Text
 
-**Default: AWS Transcribe** (recommended - no additional setup needed)
+Choose one provider:
 
-*Alternative providers (if preferred):*
 | Provider | What You Need |
 |----------|---------------|
+| AWS Transcribe (recommended) | No API key needed — uses IAM |
 | Deepgram | API key from [deepgram.com](https://deepgram.com) |
 | ElevenLabs | API key from [elevenlabs.io](https://elevenlabs.io) |
 
@@ -88,44 +100,24 @@ You need at least one LLM provider configured. OpenRouter is recommended as it p
 Please have this information available during the deployment call:
 
 ```
-Domain name:          ___________________________
-AWS region:           ___________________________
-Sender email:         ___________________________
-LLM provider:         ___________________________
-LLM API key:          ___________________________
+Domain name:            ___________________________
+Route53 Hosted Zone ID: ___________________________
+AWS region:             ___________________________
+Sender email:           ___________________________
 
-Admin user email:     ___________________________
-Admin user password:  ___________________________
+LLM provider:           ___________________________
+LLM API key:            ___________________________
+
+STT provider:           ___________________________
+STT API key (if not AWS): ___________________________
+
+Admin user email:       ___________________________
+Admin user password:    ___________________________
 
 (Optional)
-Sentry DSN:           ___________________________
-Connect Instance ID:  ___________________________
+Sentry DSN:             ___________________________
+Connect Instance ID:    ___________________________
 ```
-
-## Estimated Costs
-
-Monthly AWS costs for a small deployment (~10 users):
-
-| Service | Estimated Cost |
-|---------|---------------|
-| RDS (db.t3.small) | ~$25/month |
-| ECS Fargate | ~$30/month |
-| NAT Gateway | ~$35/month |
-| ALB | ~$20/month |
-| S3 + Data Transfer | ~$5/month |
-| **Total** | **~$115/month** |
-
-*Costs vary by region and usage. First deployment may include one-time certificate costs.*
-
-## Deployment Timeline
-
-| Phase | Duration |
-|-------|----------|
-| Configuration | 15-20 min |
-| Infrastructure deployment | 15-20 min |
-| DNS propagation | 5-30 min |
-| Verification & testing | 10-15 min |
-| **Total** | **45-90 min** |
 
 ## Questions?
 
