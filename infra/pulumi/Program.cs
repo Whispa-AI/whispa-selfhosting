@@ -58,7 +58,8 @@ return await Deployment.RunAsync(() =>
         appSecretsArn: secrets.AppSecretsArn,
         apiKeysSecretArn: secrets.ApiKeysSecretArn,
         backendLogGroupArn: monitoring.BackendLogGroupArn,
-        frontendLogGroupArn: monitoring.FrontendLogGroupArn);
+        frontendLogGroupArn: monitoring.FrontendLogGroupArn,
+        superuserPasswordSecretArn: secrets.SuperuserPasswordSecretArn);
 
     // ===================
     // Phase 4: Compute

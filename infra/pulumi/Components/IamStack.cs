@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Pulumi;
 using Pulumi.Aws;
 using Pulumi.Aws.Iam;
@@ -29,6 +30,7 @@ public class IamStack : ComponentResource
         Output<string> apiKeysSecretArn,
         Output<string> backendLogGroupArn,
         Output<string> frontendLogGroupArn,
+        Output<string> superuserPasswordSecretArn,
         ComponentResourceOptions? options = null)
         : base("whispa:iam:IamStack", name, options)
     {
@@ -75,21 +77,26 @@ public class IamStack : ComponentResource
         }, new CustomResourceOptions { Parent = this });
 
         // Custom policy for reading secrets
-        var secretsReadPolicy = Output.All(dbPasswordSecretArn, appSecretsArn, apiKeysSecretArn)
-            .Apply(arns => JsonSerializer.Serialize(new
+        var secretsReadPolicy = Output.All(dbPasswordSecretArn, appSecretsArn, apiKeysSecretArn, superuserPasswordSecretArn)
+            .Apply(arns =>
             {
-                Version = "2012-10-17",
-                Statement = new[]
+                // Filter out empty ARNs (superuser secret is optional)
+                var resources = arns.Where(arn => !string.IsNullOrEmpty(arn)).ToArray();
+                return JsonSerializer.Serialize(new
                 {
-                    new
+                    Version = "2012-10-17",
+                    Statement = new[]
                     {
-                        Sid = "ReadSecrets",
-                        Effect = "Allow",
-                        Action = new[] { "secretsmanager:GetSecretValue" },
-                        Resource = arns,
+                        new
+                        {
+                            Sid = "ReadSecrets",
+                            Effect = "Allow",
+                            Action = new[] { "secretsmanager:GetSecretValue" },
+                            Resource = resources,
+                        },
                     },
-                },
-            }));
+                });
+            });
 
         new RolePolicy($"{name}-task-execution-secrets", new RolePolicyArgs
         {
