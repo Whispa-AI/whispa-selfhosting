@@ -1,75 +1,129 @@
-# Example Pulumi configuration for development environment
-# Copy this file to Pulumi.dev.yaml and fill in your values
+# =============================================================================
+# Whispa Self-Hosting - Pulumi Configuration Template
+# =============================================================================
+#
+# QUICK START:
+#   1. Copy this file:  cp Pulumi.dev.yaml.example Pulumi.<your-stack>.yaml
+#   2. Fill in the REQUIRED values below (replace all "CHANGE_ME" placeholders)
+#   3. Set secrets via CLI (cannot be stored in plain YAML):
+#        pulumi config set --secret whispa:llmApiKey "sk-or-your-key"
+#        pulumi config set --secret whispa:superuserPassword "your-password"
+#   4. Deploy:  pulumi stack init <your-stack> && pulumi up
+#
+# See docs/CONFIGURATION.md for full details on all options.
+# =============================================================================
 
 config:
-  # AWS Region
-  aws:region: ap-southeast-2
-
   # ===================
-  # Required Settings
+  # REQUIRED - You must fill these in
   # ===================
 
-  # Domain name for the application
-  whispa:domainName: whispa-dev.yourdomain.com
+  # AWS Region for all resources
+  aws:region: CHANGE_ME  # e.g., us-east-1, ap-southeast-2, eu-west-1
 
-  # ACM certificate ARN (must be in the same region)
-  # Create this in AWS Console first: ACM > Request Certificate > DNS validation
-  whispa:certificateArn: arn:aws:acm:ap-southeast-2:123456789012:certificate/abc-123-def
-  # Alternatively, auto-provision ACM via Route53:
-  # whispa:autoCertificate: true
-  # whispa:hostedZoneId: Z0123456789ABCDEFGHIJ
-
-  # Verified SES sender email
-  # Verify in AWS Console: SES > Verified identities > Create identity
-  whispa:mailFrom: noreply@yourdomain.com
+  # Your domain name for Whispa
+  whispa:domainName: CHANGE_ME  # e.g., whispa.yourcompany.com
 
   # Frontend URL (must match domainName with https://)
-  whispa:frontendUrl: https://whispa-dev.yourdomain.com
+  whispa:frontendUrl: CHANGE_ME  # e.g., https://whispa.yourcompany.com
 
-  # Optional API domain (enables api.<domain> host-based routing)
-  # whispa:apiDomainName: api.whispa-dev.yourdomain.com
+  # Verified SES sender email
+  # Verify first: AWS Console > SES > Verified identities > Create identity
+  whispa:mailFrom: CHANGE_ME  # e.g., noreply@yourcompany.com
 
-  # LLM API key (set with: pulumi config set --secret whispa:llmApiKey YOUR_KEY)
-  # whispa:llmApiKey:
-  #   secure: AAABxxxxx...
+  # SSL Certificate - choose ONE of the following approaches:
+
+  # OPTION A (recommended): Auto-provision via Route53
+  # Requires a Route53 hosted zone for your domain
+  whispa:autoCertificate: true
+  whispa:hostedZoneId: CHANGE_ME  # e.g., Z0123456789ABCDEFGHIJ
+
+  # OPTION B: Provide an existing ACM certificate ARN
+  # whispa:certificateArn: arn:aws:acm:REGION:ACCOUNT:certificate/ID
+
+  # LLM API Key - MUST be set via CLI (it's a secret):
+  #   pulumi config set --secret whispa:llmApiKey "sk-or-your-key"
 
   # ===================
-  # Optional Settings
+  # STRONGLY RECOMMENDED - Bootstrap Admin User
+  # ===================
+  # Created automatically during first deployment. Without this, you'll
+  # need to manually promote a user via ECS Exec after deployment.
+
+  whispa:superuserEmail: CHANGE_ME  # e.g., admin@yourcompany.com
+  # Set password via CLI:
+  #   pulumi config set --secret whispa:superuserPassword "your-secure-password"
+
+  # ===================
+  # Speech-to-Text Provider
   # ===================
 
-  # Route53 hosted zone ID (if you want automatic DNS setup)
-  # whispa:hostedZoneId: Z0123456789ABCDEFGHIJ
+  # amazon (recommended) - uses IAM role, no API key needed
+  # deepgram - requires: pulumi config set --secret whispa:deepgramApiKey "KEY"
+  # elevenlabs - requires: pulumi config set --secret whispa:elevenlabsApiKey "KEY"
+  whispa:transcriptionProvider: amazon
 
-  # Database settings (defaults are fine for dev)
-  # whispa:dbInstanceClass: db.t3.medium
-  # whispa:dbAllocatedStorage: 20
-  # whispa:dbMultiAz: false
-  # whispa:dbUsername: whispa_admin
+  # ===================
+  # Optional - Resource Naming
+  # ===================
 
-  # ECS settings (defaults are fine for dev)
-  # whispa:backendCpu: 512
-  # whispa:backendMemory: 1024
-  # whispa:frontendCpu: 256
-  # whispa:frontendMemory: 512
-  # whispa:desiredCount: 1
+  # Custom prefix for all AWS resources (e.g., "acme-prod")
+  # If not set, resources are named: whispa-{stack-name}-{type}
+  # whispa:resourcePrefix: acme-prod
 
-  # Container images (defaults to Whispa's public GHCR)
+  # ===================
+  # Optional - API Domain (for host-based routing)
+  # ===================
+
+  # Separate domain for API traffic (e.g., api.whispa.yourcompany.com)
+  # If set, Route53 will create a record for this too
+  # whispa:apiDomainName: api.whispa.yourcompany.com
+
+  # ===================
+  # Optional - Database Sizing
+  # ===================
+
+  # Defaults are suitable for small-medium deployments
+  # whispa:dbInstanceClass: db.t3.medium    # RDS instance type
+  # whispa:dbAllocatedStorage: "20"         # Storage in GB
+  # whispa:dbMultiAz: "true"               # Enable for production HA
+  # whispa:dbBackupRetentionDays: "7"       # Backup retention
+
+  # ===================
+  # Optional - ECS Compute Sizing
+  # ===================
+
+  # Defaults are suitable for small-medium deployments
+  # whispa:backendCpu: "512"         # 0.5 vCPU (256, 512, 1024, 2048, 4096)
+  # whispa:backendMemory: "1024"     # 1 GB
+  # whispa:frontendCpu: "256"        # 0.25 vCPU
+  # whispa:frontendMemory: "512"     # 512 MB
+  # whispa:desiredCount: "1"         # Task replicas (use 2+ for production HA)
+
+  # ===================
+  # Optional - Container Images
+  # ===================
+
+  # Defaults to latest from Whispa's public GHCR
   # whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:latest
   # whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:latest
 
-  # Transcription provider: amazon (recommended), deepgram, or elevenlabs
-  # Amazon Transcribe uses IAM role - no API key needed
-  whispa:transcriptionProvider: amazon
+  # ===================
+  # Optional - AWS Connect Integration
+  # ===================
 
-  # Additional API keys (only if NOT using Amazon Transcribe)
-  # whispa:deepgramApiKey: (secret)     # If transcriptionProvider: deepgram
-  # whispa:elevenlabsApiKey: (secret)   # If transcriptionProvider: elevenlabs
-
-  # AWS Connect integration (disabled by default)
-  # whispa:enableAwsConnect: false
+  # Set your Connect instance ID to enable real-time call transcription
   # whispa:connectInstanceId: your-connect-instance-id
   # whispa:kvsStreamPrefix: whispa-connect
 
-  # Bootstrap admin user (optional; set password with --secret)
-  # whispa:superuserEmail: admin@example.com
-  # whispa:superuserPassword: (secret)
+  # ===================
+  # Optional - Observability
+  # ===================
+
+  # whispa:sentryDsn: https://xxx@sentry.io/xxx
+
+  # ===================
+  # Optional - Feature Flags
+  # ===================
+
+  # whispa:showSignupCta: "false"           # Show signup CTA

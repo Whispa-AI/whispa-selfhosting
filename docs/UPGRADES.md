@@ -37,18 +37,20 @@ Schedule upgrades during low-traffic periods.
 
 ## Standard Upgrade Process
 
-### 1. Update Image Tags
+### 1. Update Container Images
 
 Edit your `Pulumi.<stack>.yaml`:
 
 ```yaml
 config:
-  whispa:imageTag: v1.2.0  # New version
+  whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:v1.2.0
+  whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:v1.2.0
 ```
 
 Or set via CLI:
 ```bash
-pulumi config set whispa:imageTag v1.2.0
+pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:v1.2.0
+pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:v1.2.0
 ```
 
 ### 2. Preview Changes
@@ -95,7 +97,8 @@ If issues occur after upgrade:
 
 ```bash
 # Revert to previous version
-pulumi config set whispa:imageTag v1.1.0  # Previous version
+pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:v1.1.0
+pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:v1.1.0
 
 # Apply
 pulumi up
@@ -139,7 +142,8 @@ Major versions may require additional steps.
 pg_dump -h <rds-endpoint> -U whispa -d whispa > backup-v1.sql
 
 # 2. Update Pulumi configuration (check release notes for new options)
-pulumi config set whispa:imageTag v2.0.0
+pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:v2.0.0
+pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:v2.0.0
 pulumi config set whispa:newConfigOption value  # If required
 
 # 3. Preview and apply
@@ -226,7 +230,8 @@ jobs:
       - name: Upgrade
         run: |
           cd infra/pulumi
-          pulumi config set whispa:imageTag ${{ inputs.version }}
+          pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:${{ inputs.version }}
+          pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:${{ inputs.version }}
           pulumi up --yes
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
