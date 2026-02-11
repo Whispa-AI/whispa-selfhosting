@@ -6,7 +6,6 @@
 #   1. Copy this file:  cp Pulumi.dev.yaml.example Pulumi.<your-stack>.yaml
 #   2. Fill in the REQUIRED values below (replace all "CHANGE_ME" placeholders)
 #   3. Set secrets via CLI (cannot be stored in plain YAML):
-#        pulumi config set --secret whispa:llmApiKey "sk-or-your-key"
 #        pulumi config set --secret whispa:superuserPassword "your-password"
 #   4. Deploy:  pulumi stack init <your-stack> && pulumi up
 #
@@ -41,9 +40,6 @@ config:
   # OPTION B: Provide an existing ACM certificate ARN
   # whispa:certificateArn: arn:aws:acm:REGION:ACCOUNT:certificate/ID
 
-  # LLM API Key - MUST be set via CLI (it's a secret):
-  #   pulumi config set --secret whispa:llmApiKey "sk-or-your-key"
-
   # ===================
   # STRONGLY RECOMMENDED - Bootstrap Admin User
   # ===================
@@ -64,6 +60,28 @@ config:
   whispa:transcriptionProvider: amazon
 
   # ===================
+  # LLM Configuration
+  # ===================
+
+  # Option A: AWS Bedrock (recommended for self-hosting — uses IAM, no API key needed)
+  # Set bedrockRegion to enable Bedrock IAM permissions
+  # whispa:bedrockRegion: ap-southeast-2
+  # whispa:llmModelDefault: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+
+  # Option B: OpenRouter (requires API key)
+  # whispa:llmModelDefault: openrouter/google/gemini-2.5-flash
+  # Set with: pulumi config set --secret whispa:llmApiKey YOUR_KEY
+
+  # Per-analyzer model overrides (optional — falls back to llmModelDefault)
+  # whispa:llmModelActionCards: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # whispa:llmModelWorkflow: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # whispa:llmModelSuggestedResponses: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # whispa:llmModelSentiment: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # whispa:llmModelCoaching: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # whispa:llmModelSummary: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # whispa:llmModelClassification: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+
+  # ===================
   # Optional - Resource Naming
   # ===================
 
@@ -78,6 +96,13 @@ config:
   # Separate domain for API traffic (e.g., api.whispa.yourcompany.com)
   # If set, Route53 will create a record for this too
   # whispa:apiDomainName: api.whispa.yourcompany.com
+
+  # ===================
+  # Optional - Email Settings
+  # ===================
+
+  # whispa:mailFromName: Whispa              # Sender display name (default: Whispa)
+  # whispa:feedbackEmail: support@yourcompany.com  # Feedback email (default: same as mailFrom)
 
   # ===================
   # Optional - Database Sizing
@@ -105,16 +130,24 @@ config:
   # ===================
 
   # Defaults to latest from Whispa's public GHCR
-  # whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:latest
-  # whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:latest
+  # Pin to a specific version for production
+  # whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:v1.0.0
+  # whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:v1.0.0
 
   # ===================
   # Optional - AWS Connect Integration
   # ===================
 
   # Set your Connect instance ID to enable real-time call transcription
+  # API key for Lambda-to-backend auth is auto-generated
   # whispa:connectInstanceId: your-connect-instance-id
   # whispa:kvsStreamPrefix: whispa-connect
+
+  # ===================
+  # Optional - Feature Flags
+  # ===================
+
+  # whispa:showSignupCta: "false"           # Show signup CTA (default: false for self-hosted)
 
   # ===================
   # Optional - Observability
@@ -122,8 +155,7 @@ config:
 
   # whispa:sentryDsn: https://xxx@sentry.io/xxx
 
-  # ===================
-  # Optional - Feature Flags
-  # ===================
-
-  # whispa:showSignupCta: "false"           # Show signup CTA
+  # Langfuse LLM observability (optional)
+  # whispa:langfusePublicKey: pk-lf-...
+  # whispa:langfuseHost: https://cloud.langfuse.com
+  # Set with: pulumi config set --secret whispa:langfuseSecretKey YOUR_KEY

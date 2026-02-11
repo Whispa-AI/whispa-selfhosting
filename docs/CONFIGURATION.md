@@ -7,7 +7,7 @@ This document describes all configuration options for your Whispa deployment.
 Pulumi configuration lives in a `Pulumi.<stack>.yaml` file. **You can edit this file directly** instead of running `pulumi config set` for each value. The only exception is **secrets** (API keys, passwords), which must be set via the CLI so Pulumi can encrypt them:
 
 ```bash
-pulumi config set --secret whispa:llmApiKey "sk-or-..."
+pulumi config set --secret whispa:superuserPassword "your-password"
 ```
 
 To get started quickly, copy the example file:
@@ -16,7 +16,7 @@ To get started quickly, copy the example file:
 cd infra/pulumi
 cp Pulumi.dev.yaml.example Pulumi.<your-stack>.yaml
 # Edit the file with your values, then set secrets:
-pulumi config set --secret whispa:llmApiKey "your-key"
+pulumi config set --secret whispa:superuserPassword "your-password"
 ```
 
 ## Required Configuration
@@ -27,7 +27,6 @@ pulumi config set --secret whispa:llmApiKey "your-key"
 | `whispa:domainName` | Your domain for Whispa | `whispa.company.com` |
 | `whispa:frontendUrl` | Full frontend URL | `https://whispa.company.com` |
 | `whispa:mailFrom` | Verified SES sender email | `noreply@company.com` |
-| `whispa:llmApiKey` | OpenRouter/LLM API key | (secret) |
 
 You must also provide either `whispa:certificateArn` OR enable `whispa:autoCertificate` (with `whispa:hostedZoneId`).
 
@@ -118,6 +117,35 @@ These settings are not currently configurable via Pulumi config.
 - `deepgram`: Requires `whispa:deepgramApiKey`
 - `elevenlabs`: Requires `whispa:elevenlabsApiKey`
 
+## LLM Model Configuration
+
+Configure which LLM model each analyzer uses. Models are specified with a provider prefix (e.g., `bedrock/`, `openrouter/`).
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:llmModelDefault` | (none) | Default model used as fallback for all analyzers |
+| `whispa:llmModelActionCards` | (uses default) | Model for action cards analyzer |
+| `whispa:llmModelWorkflow` | (uses default) | Model for workflow progress analyzer |
+| `whispa:llmModelSuggestedResponses` | (uses default) | Model for suggested responses analyzer |
+| `whispa:llmModelSentiment` | (uses default) | Model for sentiment analyzer |
+| `whispa:llmModelCoaching` | (uses default) | Model for post-call coaching feedback |
+| `whispa:llmModelSummary` | (uses default) | Model for post-call summary generation |
+| `whispa:llmModelClassification` | (uses default) | Model for call classification |
+
+**Provider prefixes:**
+- `bedrock/` — AWS Bedrock (uses IAM role, requires `bedrockRegion`). Example: `bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0`
+- `openrouter/` — OpenRouter (requires `llmApiKey`). Example: `openrouter/google/gemini-2.5-flash`
+
+## AWS Bedrock Configuration
+
+Use AWS Bedrock as your LLM provider to keep all AI traffic within your AWS account.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:bedrockRegion` | (none) | AWS region for Bedrock API calls. Setting this enables Bedrock IAM permissions on the ECS task role |
+
+**Note:** When `bedrockRegion` is set, the deployment automatically grants `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` permissions to the ECS task role. No API key is needed — authentication uses the task's IAM role.
+
 ## Email Configuration
 
 | Key | Default | Description |
@@ -138,10 +166,20 @@ These settings are not currently configurable via Pulumi config.
 
 | Key | Description | Required |
 |-----|-------------|----------|
-| `whispa:llmApiKey` | OpenRouter/LLM API key | Yes (secret) |
+| `whispa:llmApiKey` | OpenRouter/LLM API key | Only if using OpenRouter (not needed for Bedrock) |
 | `whispa:deepgramApiKey` | Deepgram STT API key | If using Deepgram (secret) |
 | `whispa:elevenlabsApiKey` | ElevenLabs STT API key | If using ElevenLabs (secret) |
 | `whispa:sentryDsn` | Sentry error tracking DSN | No |
+
+## Observability
+
+### Langfuse (LLM Observability)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:langfusePublicKey` | (none) | Langfuse public key |
+| `whispa:langfuseSecretKey` | (none) | Langfuse secret key (secret) |
+| `whispa:langfuseHost` | (none) | Langfuse host URL (for self-hosted Langfuse, defaults to cloud) |
 
 ## Bootstrap Admin User
 
@@ -173,6 +211,7 @@ This automatically:
 - Adds KVS permissions (kinesisvideo:GetMedia, GetDataEndpoint, ListStreams)
 - Adds Connect API permissions (connect:ListUsers, DescribeUser, etc.)
 - Adds Transcribe permissions for real-time STT
+- Generates an API key for Lambda-to-backend authentication
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -180,11 +219,12 @@ This automatically:
 | `whispa:kvsStreamPrefix` | `whispa-connect` | KVS stream name prefix (must match your Connect instance) |
 | `whispa:enableAwsConnect` | Auto | Explicitly enable/disable (auto-enabled when connectInstanceId is set) |
 | `whispa:deployConnectLambda` | Same as enableAwsConnect | Deploy the Connect Lambda via Pulumi |
-| `whispa:connectApiKey` | (none) | API key for Lambda-to-backend auth |
+
+**Note:** The Connect API key for Lambda-to-backend authentication is auto-generated and stored in AWS Secrets Manager. No manual configuration needed.
 
 **Finding your Connect Instance ID:**
 
-1. Go to AWS Console → Amazon Connect → Your instance
+1. Go to AWS Console > Amazon Connect > Your instance
 2. Copy the Instance ID from the ARN: `arn:aws:connect:region:account:instance/<INSTANCE-ID>`
 
 **After updating config**, restart the backend to pick up new IAM permissions:
@@ -210,8 +250,19 @@ These environment variables are automatically set from Pulumi configuration in t
 | `DB_PASSWORD` | Secrets Manager | Database password (auto-generated) |
 | `FRONTEND_URL` | `whispa:frontendUrl` | Frontend URL for CORS |
 | `CORS_ORIGINS` | `whispa:corsOrigins` | Allowed CORS origins (JSON array) |
-| `LLM_API_KEY` | Secrets Manager | OpenRouter/OpenAI API key |
+| `LLM_API_KEY` | Secrets Manager | OpenRouter/OpenAI API key (if configured) |
 | `LLM_BASE_URL` | `whispa:llmBaseUrl` | Custom LLM API base URL |
+| `LLM_MODEL_DEFAULT` | `whispa:llmModelDefault` | Default LLM model identifier |
+| `LLM_MODEL_ACTION_CARDS` | `whispa:llmModelActionCards` | Model for action cards analyzer |
+| `LLM_MODEL_WORKFLOW` | `whispa:llmModelWorkflow` | Model for workflow progress analyzer |
+| `LLM_MODEL_SUGGESTED_RESPONSES` | `whispa:llmModelSuggestedResponses` | Model for suggested responses analyzer |
+| `LLM_MODEL_SENTIMENT` | `whispa:llmModelSentiment` | Model for sentiment analyzer |
+| `LLM_MODEL_COACHING` | `whispa:llmModelCoaching` | Model for coaching feedback |
+| `LLM_MODEL_SUMMARY` | `whispa:llmModelSummary` | Model for summary generation |
+| `LLM_MODEL_CLASSIFICATION` | `whispa:llmModelClassification` | Model for call classification |
+| `AWS_BEDROCK_REGION` | `whispa:bedrockRegion` | AWS region for Bedrock API calls |
+| `AWS_TRANSCRIBE_REGION` | `aws:region` | AWS Transcribe region |
+| `AWS_CONNECT_REGION` | `aws:region` | AWS Connect region |
 | `DEEPGRAM_API_KEY` | Secrets Manager | Deepgram API key (if configured) |
 | `ELEVENLABS_API_KEY` | Secrets Manager | ElevenLabs API key (if configured) |
 | `S3_AUDIO_BUCKET` | S3 bucket name | Audio file storage bucket |
@@ -224,6 +275,10 @@ These environment variables are automatically set from Pulumi configuration in t
 | `SHOW_SIGNUP_CTA` | `whispa:showSignupCta` | Show signup CTA flag |
 | `SENTRY_DSN` | `whispa:sentryDsn` | Sentry DSN for error tracking |
 | `SENTRY_ENVIRONMENT` | `whispa:environment` | Sentry environment name |
+| `LANGFUSE_PUBLIC_KEY` | `whispa:langfusePublicKey` | Langfuse public key |
+| `LANGFUSE_SECRET_KEY` | Secrets Manager | Langfuse secret key (if configured) |
+| `LANGFUSE_HOST` | `whispa:langfuseHost` | Langfuse host URL |
+| `CONNECT_API_KEY` | Secrets Manager | Lambda-to-backend auth key (auto-generated) |
 | `SUPERUSER_EMAIL` | `whispa:superuserEmail` | Bootstrap admin email |
 | `SUPERUSER_PASSWORD` | Secrets Manager | Bootstrap admin password (if configured) |
 | `ACCESS_SECRET_KEY` | Secrets Manager | JWT access token signing key (auto-generated) |
@@ -239,18 +294,21 @@ These environment variables are automatically set from Pulumi configuration in t
 
 ## Example Configurations
 
-### Minimal Production
+### Minimal Production (Bedrock)
 
 ```yaml
 config:
-  aws:region: us-east-1
-  whispa:environment: prod
+  aws:region: ap-southeast-2
   whispa:domainName: whispa.company.com
   whispa:frontendUrl: https://whispa.company.com
   whispa:mailFrom: noreply@company.com
   whispa:hostedZoneId: Z1234567890ABC
+  whispa:autoCertificate: true
   whispa:transcriptionProvider: amazon
-  whispa:llmApiKey:
+  whispa:bedrockRegion: ap-southeast-2
+  whispa:llmModelDefault: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  whispa:superuserEmail: admin@company.com
+  whispa:superuserPassword:
     secure: v1:xxx...
 ```
 
@@ -265,6 +323,8 @@ config:
   whispa:mailFrom: noreply@company.com
   whispa:hostedZoneId: Z1234567890ABC
   whispa:transcriptionProvider: amazon
+  whispa:bedrockRegion: us-east-1
+  whispa:llmModelDefault: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
 
   # Multi-AZ database
   whispa:dbInstanceClass: db.t3.medium
@@ -276,31 +336,8 @@ config:
   whispa:backendMemory: "2048"
   whispa:desiredCount: "2"
 
-  # API keys
-  whispa:llmApiKey:
-    secure: v1:xxx...
-  whispa:sentryDsn:
-    secure: v1:xxx...
-```
-
-### Development/Staging
-
-```yaml
-config:
-  aws:region: us-east-1
-  whispa:resourcePrefix: whispa-staging  # All resources prefixed with "whispa-staging-"
-  whispa:domainName: staging.whispa.company.com
-  whispa:frontendUrl: https://staging.whispa.company.com
-
-  # Minimal resources
-  whispa:dbInstanceClass: db.t3.micro
-  whispa:backendCpu: "256"
-  whispa:backendMemory: "512"
-
-  whispa:llmApiKey:
-    secure: v1:xxx...
-  whispa:deepgramApiKey:
-    secure: v1:xxx...
+  # Observability
+  whispa:sentryDsn: https://xxx@sentry.io/xxx
 ```
 
 ### With AWS Connect
@@ -312,16 +349,12 @@ config:
   whispa:domainName: whispa.acme.com
   whispa:frontendUrl: https://whispa.acme.com
   whispa:mailFrom: noreply@acme.com
+  whispa:bedrockRegion: ap-southeast-2
+  whispa:llmModelDefault: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
 
   # AWS Connect integration
-  whispa:enableAwsConnect: "true"
   whispa:connectInstanceId: "a1b2c3d4-5678-90ab-cdef-EXAMPLE11111"
-  whispa:kvsStreamPrefix: "acme-connect"  # Must match Connect instance stream prefix
-
-  whispa:llmApiKey:
-    secure: v1:xxx...
-  whispa:elevenlabsApiKey:
-    secure: v1:xxx...
+  whispa:kvsStreamPrefix: "acme-connect"
 ```
 
 ## Setting Secrets

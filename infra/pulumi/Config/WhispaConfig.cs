@@ -137,8 +137,11 @@ public class WhispaConfig
     // API Keys (Secrets)
     // ===================
 
-    /// <summary>OpenRouter/LLM API key</summary>
-    public Output<string> LlmApiKey => _config.RequireSecret("llmApiKey");
+    /// <summary>OpenRouter/LLM API key (optional when using Bedrock models)</summary>
+    public Output<string>? LlmApiKey => _config.GetSecret("llmApiKey");
+
+    /// <summary>Whether an LLM API key is configured</summary>
+    public bool HasLlmApiKey => _config.Get("llmApiKey") != null;
 
     /// <summary>LLM base URL (optional, defaults to OpenRouter)</summary>
     public string? LlmBaseUrl => _config.Get("llmBaseUrl");
@@ -156,6 +159,41 @@ public class WhispaConfig
     public bool HasElevenlabsApiKey => _config.Get("elevenlabsApiKey") != null;
 
     // ===================
+    // LLM Model Configuration
+    // ===================
+
+    /// <summary>Default LLM model for all analyzers</summary>
+    public string? LlmModelDefault => _config.Get("llmModelDefault");
+
+    /// <summary>LLM model for action cards analyzer</summary>
+    public string? LlmModelActionCards => _config.Get("llmModelActionCards");
+
+    /// <summary>LLM model for workflow progress analyzer</summary>
+    public string? LlmModelWorkflow => _config.Get("llmModelWorkflow");
+
+    /// <summary>LLM model for suggested responses analyzer</summary>
+    public string? LlmModelSuggestedResponses => _config.Get("llmModelSuggestedResponses");
+
+    /// <summary>LLM model for sentiment analyzer</summary>
+    public string? LlmModelSentiment => _config.Get("llmModelSentiment");
+
+    /// <summary>LLM model for coaching feedback</summary>
+    public string? LlmModelCoaching => _config.Get("llmModelCoaching");
+
+    /// <summary>LLM model for summary generation</summary>
+    public string? LlmModelSummary => _config.Get("llmModelSummary");
+
+    /// <summary>LLM model for call classification</summary>
+    public string? LlmModelClassification => _config.Get("llmModelClassification");
+
+    // ===================
+    // AWS Bedrock Configuration
+    // ===================
+
+    /// <summary>AWS region for Bedrock API calls (default: same as deployment region)</summary>
+    public string? BedrockRegion => _config.Get("bedrockRegion");
+
+    // ===================
     // Transcription Settings
     // ===================
 
@@ -166,15 +204,6 @@ public class WhispaConfig
     // Feature Flags
     // ===================
 
-    /// <summary>Enable scenario builder (default: true)</summary>
-    public bool EnableScenarioBuilder => _config.GetBoolean("enableScenarioBuilder") ?? true;
-
-    /// <summary>Enable prompt builder (default: true)</summary>
-    public bool EnablePromptBuilder => _config.GetBoolean("enablePromptBuilder") ?? true;
-
-    /// <summary>Enable training mode (default: false)</summary>
-    public bool EnableTraining => _config.GetBoolean("enableTraining") ?? false;
-
     /// <summary>Show signup CTA (default: false for self-hosted)</summary>
     public bool ShowSignupCta => _config.GetBoolean("showSignupCta") ?? false;
 
@@ -184,6 +213,18 @@ public class WhispaConfig
 
     /// <summary>Sentry DSN for error tracking (optional)</summary>
     public string? SentryDsn => _config.Get("sentryDsn");
+
+    /// <summary>Langfuse public key (optional)</summary>
+    public string? LangfusePublicKey => _config.Get("langfusePublicKey");
+
+    /// <summary>Langfuse secret key (optional)</summary>
+    public Output<string>? LangfuseSecretKey => _config.GetSecret("langfuseSecretKey");
+
+    /// <summary>Whether Langfuse secret key is configured</summary>
+    public bool HasLangfuseSecretKey => _config.Get("langfuseSecretKey") != null;
+
+    /// <summary>Langfuse host URL (optional, for self-hosted Langfuse)</summary>
+    public string? LangfuseHost => _config.Get("langfuseHost");
 
     // ===================
     // AWS Connect Integration (Optional)
@@ -198,8 +239,8 @@ public class WhispaConfig
     /// <summary>KVS stream name prefix (default: whispa-connect)</summary>
     public string KvsStreamPrefix => _config.Get("kvsStreamPrefix") ?? "whispa-connect";
 
-    /// <summary>API key for Connect Lambda to authenticate with Whispa backend (optional)</summary>
-    public string? ConnectApiKey => _config.Get("connectApiKey");
+    // Note: Connect API key is now auto-generated in SecretsStack
+    // and passed directly to the Lambda and backend container.
 
     /// <summary>Deploy AWS Connect Lambda function via Pulumi (default: true when enableAwsConnect is true)</summary>
     public bool DeployConnectLambda => _config.GetBoolean("deployConnectLambda") ?? EnableAwsConnect;

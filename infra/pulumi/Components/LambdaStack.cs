@@ -28,7 +28,7 @@ public class LambdaStack : ComponentResource
         string name,
         WhispaConfig config,
         Output<string> backendUrl,
-        Output<string>? apiKeySecretArn = null,
+        Output<string> connectApiKey,
         ComponentResourceOptions? options = null)
         : base("whispa:lambda:LambdaStack", name, options)
     {
@@ -72,31 +72,6 @@ public class LambdaStack : ComponentResource
             PolicyArn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
         }, new CustomResourceOptions { Parent = this });
 
-        // If using Secrets Manager for API key, grant read access
-        if (apiKeySecretArn != null)
-        {
-            var secretsPolicy = apiKeySecretArn.Apply(arn => JsonSerializer.Serialize(new
-            {
-                Version = "2012-10-17",
-                Statement = new[]
-                {
-                    new
-                    {
-                        Sid = "ReadApiKeySecret",
-                        Effect = "Allow",
-                        Action = new[] { "secretsmanager:GetSecretValue" },
-                        Resource = arn,
-                    },
-                },
-            }));
-
-            new RolePolicy($"{name}-secrets", new RolePolicyArgs
-            {
-                Role = lambdaRole.Name,
-                Policy = secretsPolicy,
-            }, new CustomResourceOptions { Parent = this });
-        }
-
         // Create Lambda deployment package from embedded code
         var lambdaCode = GetLambdaCode();
         var zipPath = CreateDeploymentPackage(lambdaCode);
@@ -118,8 +93,8 @@ public class LambdaStack : ComponentResource
                     // Backend URL is passed via environment variable
                     // The Lambda will append /awsconnect/call-started
                     ["WHISPA_API_URL"] = backendUrl,
-                    // API key can be set via Pulumi config or manually after deployment
-                    ["WHISPA_API_KEY"] = config.ConnectApiKey ?? "",
+                    // Auto-generated API key for Lambda-to-backend authentication
+                    ["WHISPA_API_KEY"] = connectApiKey,
                 },
             },
             Tags = new InputMap<string>
@@ -281,13 +256,24 @@ def lambda_handler(event, context):
     /// </summary>
     private static string CreateDeploymentPackage(string code)
     {
-        var tempDir = Path.GetTempPath();
-        var zipPath = Path.Combine(tempDir, $"whispa-connect-lambda-{Guid.NewGuid():N}.zip");
+        // Use a content-based hash for the filename so the zip path only changes
+        // when the Lambda code actually changes. This prevents Pulumi from
+        // detecting a spurious diff on every run.
+        var codeHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(code))).ToLowerInvariant()[..16];
 
-        using var zipArchive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
-        var entry = zipArchive.CreateEntry("lambda_function.py");
-        using var writer = new StreamWriter(entry.Open());
-        writer.Write(code);
+        var tempDir = Path.GetTempPath();
+        var zipPath = Path.Combine(tempDir, $"whispa-connect-lambda-{codeHash}.zip");
+
+        // Only recreate if the file doesn't already exist
+        if (!File.Exists(zipPath))
+        {
+            using var zipArchive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+            var entry = zipArchive.CreateEntry("lambda_function.py");
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write(code);
+        }
 
         return zipPath;
     }

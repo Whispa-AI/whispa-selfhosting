@@ -109,7 +109,7 @@ return await Deployment.RunAsync(() =>
 
         connectLambda = new LambdaStack("connect-lambda", config,
             backendUrl: backendUrl,
-            apiKeySecretArn: secrets.ApiKeysSecretArn);
+            connectApiKey: secrets.ConnectApiKey);
     }
 
     // ===================

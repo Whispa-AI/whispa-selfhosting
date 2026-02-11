@@ -28,6 +28,9 @@ public class SecretsStack : ComponentResource
     /// <summary>API keys secret ARN (LLM, Deepgram, ElevenLabs)</summary>
     public Output<string> ApiKeysSecretArn { get; }
 
+    /// <summary>Connect API key value (for Lambda env var)</summary>
+    public Output<string> ConnectApiKey { get; }
+
     /// <summary>Bootstrap superuser password secret ARN (optional)</summary>
     public Output<string> SuperuserPasswordSecretArn { get; }
 
@@ -72,6 +75,15 @@ public class SecretsStack : ComponentResource
             Special = false,
         }, new CustomResourceOptions { Parent = this });
 
+        // Connect API key - auto-generated for Lambda-to-backend auth
+        var connectApiKey = new RandomPassword($"{name}-connect-api-key", new RandomPasswordArgs
+        {
+            Length = 48,
+            Special = false,
+        }, new CustomResourceOptions { Parent = this });
+
+        ConnectApiKey = connectApiKey.Result;
+
         // ===================
         // Database Password Secret
         // ===================
@@ -110,18 +122,20 @@ public class SecretsStack : ComponentResource
             },
         }, new CustomResourceOptions { Parent = this });
 
-        // Store JWT keys as JSON
+        // Store JWT keys + Connect API key as JSON
         var appSecretsJson = Output.All(
             accessSecretKey.Result,
             resetPasswordSecretKey.Result,
             verificationSecretKey.Result,
-            refreshSecretKey.Result
+            refreshSecretKey.Result,
+            connectApiKey.Result
         ).Apply(keys => System.Text.Json.JsonSerializer.Serialize(new
         {
             ACCESS_SECRET_KEY = keys[0],
             RESET_PASSWORD_SECRET_KEY = keys[1],
             VERIFICATION_SECRET_KEY = keys[2],
             REFRESH_SECRET_KEY = keys[3],
+            CONNECT_API_KEY = keys[4],
         }));
 
         new SecretVersion($"{name}-app-secrets-version", new SecretVersionArgs
@@ -150,22 +164,26 @@ public class SecretsStack : ComponentResource
         // Build API keys JSON from config
         // Note: We use Output.All to handle the potentially null optional keys
         var apiKeysJson = Output.All(
-            config.LlmApiKey,
+            config.LlmApiKey ?? Output.Create(""),
             config.DeepgramApiKey ?? Output.Create(""),
-            config.ElevenlabsApiKey ?? Output.Create("")
+            config.ElevenlabsApiKey ?? Output.Create(""),
+            config.LangfuseSecretKey ?? Output.Create("")
         ).Apply(keys =>
         {
-            var dict = new Dictionary<string, string>
-            {
-                ["LLM_API_KEY"] = keys[0],
-            };
+            var dict = new Dictionary<string, string>();
 
             // Only include if provided
+            if (!string.IsNullOrEmpty(keys[0]))
+                dict["LLM_API_KEY"] = keys[0];
+
             if (!string.IsNullOrEmpty(keys[1]))
                 dict["DEEPGRAM_API_KEY"] = keys[1];
 
             if (!string.IsNullOrEmpty(keys[2]))
                 dict["ELEVENLABS_API_KEY"] = keys[2];
+
+            if (!string.IsNullOrEmpty(keys[3]))
+                dict["LANGFUSE_SECRET_KEY"] = keys[3];
 
             return System.Text.Json.JsonSerializer.Serialize(dict);
         });

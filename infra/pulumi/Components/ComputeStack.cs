@@ -324,9 +324,28 @@ public class ComputeStack : ComponentResource
                         // Observability
                         new { name = "SENTRY_ENVIRONMENT", value = config.Environment },
                         new { name = "SENTRY_DSN", value = config.SentryDsn ?? "" },
+                        new { name = "LANGFUSE_PUBLIC_KEY", value = config.LangfusePublicKey ?? "" },
+                        new { name = "LANGFUSE_HOST", value = config.LangfuseHost ?? "" },
 
                         // LLM base URL (if custom)
                         new { name = "LLM_BASE_URL", value = config.LlmBaseUrl ?? "" },
+
+                        // LLM model configuration
+                        new { name = "LLM_MODEL_DEFAULT", value = config.LlmModelDefault ?? "" },
+                        new { name = "LLM_MODEL_ACTION_CARDS", value = config.LlmModelActionCards ?? "" },
+                        new { name = "LLM_MODEL_WORKFLOW", value = config.LlmModelWorkflow ?? "" },
+                        new { name = "LLM_MODEL_SUGGESTED_RESPONSES", value = config.LlmModelSuggestedResponses ?? "" },
+                        new { name = "LLM_MODEL_SENTIMENT", value = config.LlmModelSentiment ?? "" },
+                        new { name = "LLM_MODEL_COACHING", value = config.LlmModelCoaching ?? "" },
+                        new { name = "LLM_MODEL_SUMMARY", value = config.LlmModelSummary ?? "" },
+                        new { name = "LLM_MODEL_CLASSIFICATION", value = config.LlmModelClassification ?? "" },
+
+                        // AWS Bedrock (region for bedrock/* model prefixes)
+                        new { name = "AWS_BEDROCK_REGION", value = config.BedrockRegion ?? "" },
+
+                        // AWS service regions (default to deployment region)
+                        new { name = "AWS_TRANSCRIBE_REGION", value = config.AwsRegion },
+                        new { name = "AWS_CONNECT_REGION", value = config.AwsRegion },
                     },
                     secrets = BuildSecretsList(
                         appSecretArn,
@@ -334,8 +353,11 @@ public class ComputeStack : ComponentResource
                         dbSecretArn,
                         superuserSecretArn,
                         config.HasSuperuserPassword,
+                        config.HasLlmApiKey,
                         config.HasDeepgramApiKey,
-                        config.HasElevenlabsApiKey
+                        config.HasElevenlabsApiKey,
+                        config.HasLangfuseSecretKey,
+                        config.EnableAwsConnect
                     ),
                     logConfiguration = new
                     {
@@ -542,8 +564,11 @@ public class ComputeStack : ComponentResource
         string dbSecretArn,
         string superuserPasswordSecretArn,
         bool hasSuperuserPassword,
+        bool hasLlmApiKey,
         bool hasDeepgram,
-        bool hasElevenlabs
+        bool hasElevenlabs,
+        bool hasLangfuseSecretKey,
+        bool enableAwsConnect
     )
     {
         var secrets = new List<object>
@@ -554,12 +579,15 @@ public class ComputeStack : ComponentResource
             new { name = "VERIFICATION_SECRET_KEY", valueFrom = $"{appSecretArn}:VERIFICATION_SECRET_KEY::" },
             new { name = "REFRESH_SECRET_KEY", valueFrom = $"{appSecretArn}:REFRESH_SECRET_KEY::" },
 
-            // LLM API key (always required)
-            new { name = "LLM_API_KEY", valueFrom = $"{apiSecretArn}:LLM_API_KEY::" },
-
             // Database password (stored as plain secret string)
             new { name = "DB_PASSWORD", valueFrom = dbSecretArn },
         };
+
+        // LLM API key (optional when using Bedrock)
+        if (hasLlmApiKey)
+        {
+            secrets.Add(new { name = "LLM_API_KEY", valueFrom = $"{apiSecretArn}:LLM_API_KEY::" });
+        }
 
         if (hasSuperuserPassword)
         {
@@ -575,6 +603,17 @@ public class ComputeStack : ComponentResource
         if (hasElevenlabs)
         {
             secrets.Add(new { name = "ELEVENLABS_API_KEY", valueFrom = $"{apiSecretArn}:ELEVENLABS_API_KEY::" });
+        }
+
+        if (hasLangfuseSecretKey)
+        {
+            secrets.Add(new { name = "LANGFUSE_SECRET_KEY", valueFrom = $"{apiSecretArn}:LANGFUSE_SECRET_KEY::" });
+        }
+
+        // Connect API key for Lambda-to-backend authentication
+        if (enableAwsConnect)
+        {
+            secrets.Add(new { name = "CONNECT_API_KEY", valueFrom = $"{appSecretArn}:CONNECT_API_KEY::" });
         }
 
         return secrets.ToArray();

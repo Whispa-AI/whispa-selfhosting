@@ -243,6 +243,35 @@ public class IamStack : ComponentResource
             Policy = ecsExecPolicy,
         }, new CustomResourceOptions { Parent = this });
 
+        // AWS Bedrock policy (for bedrock/* LLM models)
+        if (!string.IsNullOrWhiteSpace(config.BedrockRegion))
+        {
+            var bedrockPolicy = JsonSerializer.Serialize(new
+            {
+                Version = "2012-10-17",
+                Statement = new[]
+                {
+                    new
+                    {
+                        Sid = "BedrockInvokeModel",
+                        Effect = "Allow",
+                        Action = new[]
+                        {
+                            "bedrock:InvokeModel",
+                            "bedrock:InvokeModelWithResponseStream",
+                        },
+                        Resource = $"arn:aws:bedrock:{config.BedrockRegion}::foundation-model/*",
+                    },
+                },
+            });
+
+            new RolePolicy($"{name}-task-bedrock", new RolePolicyArgs
+            {
+                Role = taskRole.Name,
+                Policy = bedrockPolicy,
+            }, new CustomResourceOptions { Parent = this });
+        }
+
         var provider = (config.TranscriptionProvider ?? string.Empty).Trim().ToLowerInvariant();
         var needsTranscribe = provider is "amazon" or "aws" or "transcribe" or "amazon-transcribe";
 
