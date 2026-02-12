@@ -308,8 +308,8 @@ public class ComputeStack : ComponentResource
                         new { name = "FRONTEND_URL", value = config.FrontendUrl },
                         new { name = "CORS_ORIGINS", value = config.CorsOrigins },
 
-                        // Bootstrap superuser (optional)
-                        new { name = "SUPERUSER_EMAIL", value = config.SuperuserEmail ?? "" },
+                        // Bootstrap superuser
+                        new { name = "SUPERUSER_EMAIL", value = config.SuperuserEmail },
 
                         // S3
                         new { name = "S3_AUDIO_BUCKET", value = bucket },
@@ -352,7 +352,6 @@ public class ComputeStack : ComponentResource
                         apiSecretArn,
                         dbSecretArn,
                         superuserSecretArn,
-                        config.HasSuperuserPassword,
                         config.HasLlmApiKey,
                         config.HasDeepgramApiKey,
                         config.HasElevenlabsApiKey,
@@ -420,6 +419,8 @@ public class ComputeStack : ComponentResource
                     {
                         // Next.js runtime config - API calls go through ALB
                         new { name = "NEXT_PUBLIC_API_BASE_URL", value = $"https://{(string.IsNullOrWhiteSpace(config.ApiDomainName) ? config.DomainName : config.ApiDomainName)}" },
+                        // Version display - extract tag from image, ignore "latest"
+                        new { name = "NEXT_PUBLIC_APP_VERSION", value = GetVersionFromImage(config.FrontendImage) },
                     },
                     logConfiguration = new
                     {
@@ -563,7 +564,6 @@ public class ComputeStack : ComponentResource
         string apiSecretArn,
         string dbSecretArn,
         string superuserPasswordSecretArn,
-        bool hasSuperuserPassword,
         bool hasLlmApiKey,
         bool hasDeepgram,
         bool hasElevenlabs,
@@ -581,17 +581,15 @@ public class ComputeStack : ComponentResource
 
             // Database password (stored as plain secret string)
             new { name = "DB_PASSWORD", valueFrom = dbSecretArn },
+
+            // Bootstrap superuser password
+            new { name = "SUPERUSER_PASSWORD", valueFrom = superuserPasswordSecretArn },
         };
 
         // LLM API key (optional when using Bedrock)
         if (hasLlmApiKey)
         {
             secrets.Add(new { name = "LLM_API_KEY", valueFrom = $"{apiSecretArn}:LLM_API_KEY::" });
-        }
-
-        if (hasSuperuserPassword)
-        {
-            secrets.Add(new { name = "SUPERUSER_PASSWORD", valueFrom = superuserPasswordSecretArn });
         }
 
         // Only include optional transcription provider keys if configured
@@ -617,5 +615,17 @@ public class ComputeStack : ComponentResource
         }
 
         return secrets.ToArray();
+    }
+
+    /// <summary>
+    /// Extracts a meaningful version from a container image tag.
+    /// Returns empty string for "latest" or untagged images.
+    /// </summary>
+    private static string GetVersionFromImage(string image)
+    {
+        if (!image.Contains(':'))
+            return "";
+        var tag = image.Split(':').Last();
+        return string.Equals(tag, "latest", StringComparison.OrdinalIgnoreCase) ? "" : tag;
     }
 }

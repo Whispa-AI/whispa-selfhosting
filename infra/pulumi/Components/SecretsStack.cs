@@ -197,34 +197,27 @@ public class SecretsStack : ComponentResource
         ApiKeysSecretArn = apiKeysSecret.Arn;
 
         // ===================
-        // Bootstrap Superuser Password (Optional)
+        // Bootstrap Superuser Password
         // ===================
 
-        if (config.HasSuperuserPassword)
+        var superuserSecret = new Secret($"{name}-superuser-password", new SecretArgs
         {
-            var superuserSecret = new Secret($"{name}-superuser-password", new SecretArgs
+            Name = $"{config.ProjectName}/{config.Environment}/superuser-password",
+            Description = "Bootstrap superuser password",
+            Tags = new InputMap<string>
             {
-                Name = $"{config.ProjectName}/{config.Environment}/superuser-password",
-                Description = "Bootstrap superuser password",
-                Tags = new InputMap<string>
-                {
-                    ["Project"] = config.ProjectName,
-                    ["Environment"] = config.Environment,
-                },
-            }, new CustomResourceOptions { Parent = this });
+                ["Project"] = config.ProjectName,
+                ["Environment"] = config.Environment,
+            },
+        }, new CustomResourceOptions { Parent = this });
 
-            new SecretVersion($"{name}-superuser-password-version", new SecretVersionArgs
-            {
-                SecretId = superuserSecret.Id,
-                SecretString = config.SuperuserPassword!,
-            }, new CustomResourceOptions { Parent = this });
-
-            SuperuserPasswordSecretArn = superuserSecret.Arn;
-        }
-        else
+        new SecretVersion($"{name}-superuser-password-version", new SecretVersionArgs
         {
-            SuperuserPasswordSecretArn = Output.Create("");
-        }
+            SecretId = superuserSecret.Id,
+            SecretString = config.SuperuserPassword,
+        }, new CustomResourceOptions { Parent = this });
+
+        SuperuserPasswordSecretArn = superuserSecret.Arn;
 
         RegisterOutputs();
     }

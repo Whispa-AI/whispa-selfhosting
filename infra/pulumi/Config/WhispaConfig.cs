@@ -111,17 +111,14 @@ public class WhispaConfig
     public string FeedbackEmail => _config.Get("feedbackEmail") ?? MailFrom;
 
     // ===================
-    // Bootstrap Admin (Optional)
+    // Bootstrap Admin
     // ===================
 
-    /// <summary>Initial admin email (optional)</summary>
-    public string? SuperuserEmail => _config.Get("superuserEmail");
+    /// <summary>Initial admin email (required)</summary>
+    public string SuperuserEmail => _config.Require("superuserEmail");
 
-    /// <summary>Initial admin password (optional, secret)</summary>
-    public Output<string>? SuperuserPassword => _config.GetSecret("superuserPassword");
-
-    /// <summary>Whether a bootstrap admin password is configured</summary>
-    public bool HasSuperuserPassword => _config.Get("superuserPassword") != null;
+    /// <summary>Initial admin password (required, secret)</summary>
+    public Output<string> SuperuserPassword => _config.RequireSecret("superuserPassword");
 
     // ===================
     // Application URLs
