@@ -243,27 +243,32 @@ public class IamStack : ComponentResource
             Policy = ecsExecPolicy,
         }, new CustomResourceOptions { Parent = this });
 
-        // AWS Bedrock policy (for bedrock/* LLM models)
+        // AWS Bedrock policy (for bedrock/* LLM models and cross-region inference profiles)
         if (!string.IsNullOrWhiteSpace(config.BedrockRegion))
         {
-            var bedrockPolicy = JsonSerializer.Serialize(new
-            {
-                Version = "2012-10-17",
-                Statement = new[]
+            var bedrockPolicy = Output.Create(GetCallerIdentity.InvokeAsync())
+                .Apply(identity => JsonSerializer.Serialize(new
                 {
-                    new
+                    Version = "2012-10-17",
+                    Statement = new[]
                     {
-                        Sid = "BedrockInvokeModel",
-                        Effect = "Allow",
-                        Action = new[]
+                        new
                         {
-                            "bedrock:InvokeModel",
-                            "bedrock:InvokeModelWithResponseStream",
+                            Sid = "BedrockInvokeModel",
+                            Effect = "Allow",
+                            Action = new[]
+                            {
+                                "bedrock:InvokeModel",
+                                "bedrock:InvokeModelWithResponseStream",
+                            },
+                            Resource = new[]
+                            {
+                                $"arn:aws:bedrock:*::foundation-model/*",
+                                $"arn:aws:bedrock:*:{identity.AccountId}:inference-profile/*",
+                            },
                         },
-                        Resource = $"arn:aws:bedrock:{config.BedrockRegion}::foundation-model/*",
                     },
-                },
-            });
+                }));
 
             new RolePolicy($"{name}-task-bedrock", new RolePolicyArgs
             {
