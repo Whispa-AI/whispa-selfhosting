@@ -242,6 +242,9 @@ public class WhispaConfig
     /// <summary>Deploy AWS Connect Lambda function via Pulumi (default: true when enableAwsConnect is true)</summary>
     public bool DeployConnectLambda => _config.GetBoolean("deployConnectLambda") ?? EnableAwsConnect;
 
+    /// <summary>Deploy EventBridge consumer Lambda for Connect contact events (default: true when enableAwsConnect is true)</summary>
+    public bool DeployEventBridgeConsumer => _config.GetBoolean("deployEventBridgeConsumer") ?? EnableAwsConnect;
+
     // ===================
     // Resource Naming
     // ===================

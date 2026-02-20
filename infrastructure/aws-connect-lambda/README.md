@@ -36,7 +36,12 @@ Arguments:
 - `AWS_REGION` - AWS region (default: ap-southeast-2)
 - `FUNCTION_NAME` - Lambda function name (default: whispa-connect)
 
-## Architecture
+## Architecture (Hybrid Model)
+
+Whispa uses two Lambdas for full Connect integration:
+
+1. **Contact Flow Lambda** (this function) — invoked synchronously from a Contact Flow to start KVS audio capture
+2. **EventBridge Consumer Lambda** — receives asynchronous contact events (agent connect/disconnect, transfers) via EventBridge
 
 ```
 Customer Call
@@ -46,11 +51,23 @@ AWS Connect Contact Flow
      |
      +-> Start Media Streaming (creates KVS stream)
      |
-     +-> Invoke Lambda (this function)
+     +-> Invoke Contact Flow Lambda (this function)
               |
               v
-         Whispa Backend --> Consumes KVS --> Transcription
+         Whispa Backend /awsconnect/call-started --> Consumes KVS --> Transcription
+
+AWS Connect EventBridge (async)
+     |
+     +-> Contact Event (CONNECTED_TO_AGENT, DISCONNECTED, etc.)
+              |
+              v
+         EventBridge Rule --> EventBridge Consumer Lambda
+              |
+              v
+         Whispa Backend /awsconnect/eventbridge --> Participant state tracking
 ```
+
+Both Lambdas are automatically deployed by Pulumi when `enableAwsConnect` is true. See `../aws-eventbridge-consumer-lambda/` for the EventBridge consumer source.
 
 ## Contact Flow Setup
 

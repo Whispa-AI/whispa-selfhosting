@@ -218,9 +218,28 @@ This automatically:
 | `whispa:connectInstanceId` | (none) | AWS Connect instance ID — **setting this enables all Connect permissions** |
 | `whispa:kvsStreamPrefix` | `whispa-connect` | KVS stream name prefix (must match your Connect instance) |
 | `whispa:enableAwsConnect` | Auto | Explicitly enable/disable (auto-enabled when connectInstanceId is set) |
-| `whispa:deployConnectLambda` | Same as enableAwsConnect | Deploy the Connect Lambda via Pulumi |
+| `whispa:deployConnectLambda` | Same as enableAwsConnect | Deploy the Contact Flow Lambda via Pulumi |
+| `whispa:deployEventBridgeConsumer` | Same as enableAwsConnect | Deploy the EventBridge consumer Lambda + rule via Pulumi |
 
 **Note:** The Connect API key for Lambda-to-backend authentication is auto-generated and stored in AWS Secrets Manager. No manual configuration needed.
+
+#### EventBridge Integration (Hybrid Model)
+
+Whispa uses a hybrid architecture for Connect integration:
+
+1. **Contact Flow Lambda** — invoked synchronously from a Contact Flow to start KVS audio capture (`/awsconnect/call-started`)
+2. **EventBridge Consumer Lambda** — receives asynchronous contact events via EventBridge for participant state tracking (`/awsconnect/eventbridge`)
+
+When `deployEventBridgeConsumer` is enabled (default when `connectInstanceId` is set), Pulumi creates:
+- A Node.js Lambda that forwards Connect events to the Whispa backend
+- An EventBridge rule filtered to `Amazon Connect Contact Event` from your specific Connect instance
+- IAM permissions and retry policy (2 retries, 5-minute max age)
+
+To disable the EventBridge consumer (e.g., if you manage EventBridge rules externally):
+
+```bash
+pulumi config set whispa:deployEventBridgeConsumer false
+```
 
 **Finding your Connect Instance ID:**
 

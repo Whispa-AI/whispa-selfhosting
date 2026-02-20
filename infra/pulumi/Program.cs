@@ -102,14 +102,26 @@ return await Deployment.RunAsync(() =>
     // ===================
 
     LambdaStack? connectLambda = null;
-    if (config.DeployConnectLambda)
+    EventBridgeStack? eventBridge = null;
+
+    if (config.DeployConnectLambda || config.DeployEventBridgeConsumer)
     {
-        // Construct backend URL from API domain
+        // Construct backend URL from API domain (shared by both Lambdas)
         var backendUrl = Output.Create($"https://{apiDomain}");
 
-        connectLambda = new LambdaStack("connect-lambda", config,
-            backendUrl: backendUrl,
-            connectApiKey: secrets.ConnectApiKey);
+        if (config.DeployConnectLambda)
+        {
+            connectLambda = new LambdaStack("connect-lambda", config,
+                backendUrl: backendUrl,
+                connectApiKey: secrets.ConnectApiKey);
+        }
+
+        if (config.DeployEventBridgeConsumer)
+        {
+            eventBridge = new EventBridgeStack("eventbridge", config,
+                backendUrl: backendUrl,
+                connectApiKey: secrets.ConnectApiKey);
+        }
     }
 
     // ===================
@@ -149,6 +161,11 @@ return await Deployment.RunAsync(() =>
         // AWS Connect Lambda (if deployed)
         ["connectLambdaArn"] = connectLambda?.FunctionArn,
         ["connectLambdaName"] = connectLambda?.FunctionName,
+
+        // EventBridge Consumer (if deployed)
+        ["eventBridgeLambdaArn"] = eventBridge?.FunctionArn,
+        ["eventBridgeLambdaName"] = eventBridge?.FunctionName,
+        ["eventBridgeRuleName"] = eventBridge?.RuleName,
 
         // Resource Naming
         ["resourcePrefix"] = config.EffectivePrefix,
