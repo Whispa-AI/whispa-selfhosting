@@ -107,7 +107,7 @@ config:
   whispa:domainName: whispa.yourcompany.com
   whispa:frontendUrl: https://whispa.yourcompany.com
   whispa:apiDomainName: api.whispa.yourcompany.com
-  whispa:transcriptionProvider: amazon  # Uses AWS Transcribe (recommended)
+  whispa:transcriptionProvider: amazon  # Or assemblyai / deepgram / elevenlabs
   whispa:hostedZoneId: Z0123456789ABC   # Route53 for automatic DNS
   whispa:dbInstanceClass: db.t3.medium
   whispa:backendCpu: 512

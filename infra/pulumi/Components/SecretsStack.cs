@@ -167,6 +167,7 @@ public class SecretsStack : ComponentResource
             config.LlmApiKey ?? Output.Create(""),
             config.DeepgramApiKey ?? Output.Create(""),
             config.ElevenlabsApiKey ?? Output.Create(""),
+            config.AssemblyaiApiKey ?? Output.Create(""),
             config.LangfuseSecretKey ?? Output.Create("")
         ).Apply(keys =>
         {
@@ -183,7 +184,10 @@ public class SecretsStack : ComponentResource
                 dict["ELEVENLABS_API_KEY"] = keys[2];
 
             if (!string.IsNullOrEmpty(keys[3]))
-                dict["LANGFUSE_SECRET_KEY"] = keys[3];
+                dict["ASSEMBLYAI_API_KEY"] = keys[3];
+
+            if (!string.IsNullOrEmpty(keys[4]))
+                dict["LANGFUSE_SECRET_KEY"] = keys[4];
 
             return System.Text.Json.JsonSerializer.Serialize(dict);
         });

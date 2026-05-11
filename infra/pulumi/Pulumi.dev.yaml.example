@@ -57,6 +57,7 @@ config:
   # amazon (recommended) - uses IAM role, no API key needed
   # deepgram - requires: pulumi config set --secret whispa:deepgramApiKey "KEY"
   # elevenlabs - requires: pulumi config set --secret whispa:elevenlabsApiKey "KEY"
+  # assemblyai - requires: pulumi config set --secret whispa:assemblyaiApiKey "KEY"
   whispa:transcriptionProvider: amazon
 
   # ===================
@@ -154,6 +155,30 @@ config:
   # ===================
 
   # whispa:sentryDsn: https://xxx@sentry.io/xxx
+
+  # RDS I/O CloudWatch alarms
+  # Alarms are created automatically for the RDS instance managed by this stack
+  # when you provide either an existing SNS topic ARN or an email address.
+  # If only alarmEmailAddress is set, Pulumi creates an SNS topic and subscribes the address.
+  # whispa:enableRdsIoAlarms: "true"
+  # whispa:alarmEmailAddress: dba-alerts@yourcompany.com
+  # whispa:alarmSnsTopicArn: arn:aws:sns:us-east-1:123456789012:existing-topic
+  # whispa:rdsInstanceIdentifiers:
+  #   - shared-postgres-instance
+  # whispa:rdsClusterIdentifiers:
+  #   - shared-aurora-cluster
+  # whispa:rdsDiskQueueDepthAlarmThreshold: "10"
+  # whispa:rdsReadIopsAlarmThreshold: "1000"
+  # whispa:rdsWriteIopsAlarmThreshold: "1000"
+  # whispa:rdsFreeStorageSpaceAlarmThreshold: "5368709120"       # 5 GiB
+  # whispa:rdsFreeableMemoryAlarmThreshold: "268435456"          # 256 MiB
+  # whispa:rdsCpuUtilizationAlarmThreshold: "80"
+  # whispa:rdsFreeLocalStorageAlarmThreshold: "2147483648"       # 2 GiB
+  # whispa:rdsVolumeReadIopsAlarmThreshold: "1000"
+  # whispa:rdsVolumeWriteIopsAlarmThreshold: "1000"
+  # whispa:auroraMySqlClusterIdentifiers:
+  #   - aurora-mysql-cluster
+  # whispa:auroraVolumeBytesLeftTotalAlarmThreshold: "10737418240"  # 10 GiB
 
   # Langfuse LLM observability (optional)
   # whispa:langfusePublicKey: pk-lf-...

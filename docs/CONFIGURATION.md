@@ -110,11 +110,12 @@ These settings are not currently configurable via Pulumi config.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:transcriptionProvider` | `elevenlabs` | Provider: `amazon`, `deepgram`, or `elevenlabs` |
+| `whispa:transcriptionProvider` | `elevenlabs` | Provider: `amazon`, `deepgram`, `assemblyai`, or `elevenlabs` |
 
 **Provider details:**
 - `amazon` (recommended for AWS): Uses AWS Transcribe via IAM role — no API key needed
 - `deepgram`: Requires `whispa:deepgramApiKey`
+- `assemblyai`: Requires `whispa:assemblyaiApiKey`
 - `elevenlabs`: Requires `whispa:elevenlabsApiKey`
 
 ## LLM Model Configuration
@@ -168,6 +169,7 @@ Use AWS Bedrock as your LLM provider to keep all AI traffic within your AWS acco
 |-----|-------------|----------|
 | `whispa:llmApiKey` | OpenRouter/LLM API key | Only if using OpenRouter (not needed for Bedrock) |
 | `whispa:deepgramApiKey` | Deepgram STT API key | If using Deepgram (secret) |
+| `whispa:assemblyaiApiKey` | AssemblyAI STT API key | If using AssemblyAI (secret) |
 | `whispa:elevenlabsApiKey` | ElevenLabs STT API key | If using ElevenLabs (secret) |
 | `whispa:sentryDsn` | Sentry error tracking DSN | No |
 
@@ -283,6 +285,7 @@ These environment variables are automatically set from Pulumi configuration in t
 | `AWS_TRANSCRIBE_REGION` | `aws:region` | AWS Transcribe region |
 | `AWS_CONNECT_REGION` | `aws:region` | AWS Connect region |
 | `DEEPGRAM_API_KEY` | Secrets Manager | Deepgram API key (if configured) |
+| `ASSEMBLYAI_API_KEY` | Secrets Manager | AssemblyAI API key (if configured) |
 | `ELEVENLABS_API_KEY` | Secrets Manager | ElevenLabs API key (if configured) |
 | `S3_AUDIO_BUCKET` | S3 bucket name | Audio file storage bucket |
 | `S3_AUDIO_REGION` | `aws:region` | S3 bucket region |

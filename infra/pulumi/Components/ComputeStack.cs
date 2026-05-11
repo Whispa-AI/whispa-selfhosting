@@ -339,6 +339,7 @@ public class ComputeStack : ComponentResource
                         new { name = "LLM_MODEL_COACHING", value = config.LlmModelCoaching ?? "" },
                         new { name = "LLM_MODEL_SUMMARY", value = config.LlmModelSummary ?? "" },
                         new { name = "LLM_MODEL_CLASSIFICATION", value = config.LlmModelClassification ?? "" },
+                        new { name = "LLM_MODEL_SCORECARD", value = config.LlmModelScorecard ?? "" },
 
                         // AWS Bedrock (region for bedrock/* model prefixes)
                         new { name = "AWS_BEDROCK_REGION", value = config.BedrockRegion ?? "" },
@@ -355,6 +356,7 @@ public class ComputeStack : ComponentResource
                         config.HasLlmApiKey,
                         config.HasDeepgramApiKey,
                         config.HasElevenlabsApiKey,
+                        config.HasAssemblyaiApiKey,
                         config.HasLangfuseSecretKey,
                         config.EnableAwsConnect
                     ),
@@ -557,7 +559,7 @@ public class ComputeStack : ComponentResource
 
     /// <summary>
     /// Builds the list of secrets to inject into the backend container.
-    /// Only includes optional API keys (Deepgram, ElevenLabs) if they are configured.
+    /// Only includes optional API keys (Deepgram, ElevenLabs, AssemblyAI) if they are configured.
     /// </summary>
     private static object[] BuildSecretsList(
         string appSecretArn,
@@ -567,6 +569,7 @@ public class ComputeStack : ComponentResource
         bool hasLlmApiKey,
         bool hasDeepgram,
         bool hasElevenlabs,
+        bool hasAssemblyai,
         bool hasLangfuseSecretKey,
         bool enableAwsConnect
     )
@@ -601,6 +604,11 @@ public class ComputeStack : ComponentResource
         if (hasElevenlabs)
         {
             secrets.Add(new { name = "ELEVENLABS_API_KEY", valueFrom = $"{apiSecretArn}:ELEVENLABS_API_KEY::" });
+        }
+
+        if (hasAssemblyai)
+        {
+            secrets.Add(new { name = "ASSEMBLYAI_API_KEY", valueFrom = $"{apiSecretArn}:ASSEMBLYAI_API_KEY::" });
         }
 
         if (hasLangfuseSecretKey)
