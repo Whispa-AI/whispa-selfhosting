@@ -16,6 +16,9 @@ namespace Whispa.Aws.Pulumi.Components;
 /// </summary>
 public class DatabaseStack : ComponentResource
 {
+    /// <summary>RDS instance identifier used for CloudWatch alarms and operational tooling</summary>
+    public Output<string> DbInstanceIdentifier { get; }
+
     /// <summary>Database endpoint hostname</summary>
     public Output<string> DbEndpoint { get; }
 
@@ -129,6 +132,7 @@ public class DatabaseStack : ComponentResource
             },
         }, new CustomResourceOptions { Parent = this });
 
+        DbInstanceIdentifier = dbInstance.Identifier;
         DbEndpoint = dbInstance.Endpoint.Apply(e => e.Split(':')[0]);  // Remove port from endpoint
         DbPort = Output.Create(5432);
 

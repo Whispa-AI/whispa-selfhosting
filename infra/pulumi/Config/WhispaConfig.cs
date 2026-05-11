@@ -72,6 +72,12 @@ public class WhispaConfig
     /// <summary>Backup retention period in days (default: 7)</summary>
     public int DbBackupRetentionDays => _config.GetInt32("dbBackupRetentionDays") ?? 7;
 
+    /// <summary>Additional externally-managed RDS instance identifiers to alarm on (optional)</summary>
+    public string[] RdsInstanceIdentifiers => _config.GetObject<string[]>("rdsInstanceIdentifiers") ?? [];
+
+    /// <summary>RDS cluster identifiers to alarm on (optional, e.g. Aurora)</summary>
+    public string[] RdsClusterIdentifiers => _config.GetObject<string[]>("rdsClusterIdentifiers") ?? [];
+
     // ===================
     // ECS Configuration
     // ===================
@@ -155,6 +161,12 @@ public class WhispaConfig
     /// <summary>Whether ElevenLabs API key is configured</summary>
     public bool HasElevenlabsApiKey => _config.Get("elevenlabsApiKey") != null;
 
+    /// <summary>AssemblyAI API key (optional - for AssemblyAI STT)</summary>
+    public Output<string>? AssemblyaiApiKey => _config.GetSecret("assemblyaiApiKey");
+
+    /// <summary>Whether AssemblyAI API key is configured</summary>
+    public bool HasAssemblyaiApiKey => _config.Get("assemblyaiApiKey") != null;
+
     // ===================
     // LLM Model Configuration
     // ===================
@@ -183,6 +195,9 @@ public class WhispaConfig
     /// <summary>LLM model for call classification</summary>
     public string? LlmModelClassification => _config.Get("llmModelClassification");
 
+    /// <summary>LLM model for QA scorecard generation</summary>
+    public string? LlmModelScorecard => _config.Get("llmModelScorecard");
+
     // ===================
     // AWS Bedrock Configuration
     // ===================
@@ -194,7 +209,7 @@ public class WhispaConfig
     // Transcription Settings
     // ===================
 
-    /// <summary>Telephony transcription provider: elevenlabs, deepgram, or amazon (default: elevenlabs)</summary>
+    /// <summary>Telephony transcription provider: elevenlabs, deepgram, assemblyai, or amazon (default: elevenlabs)</summary>
     public string TranscriptionProvider => _config.Get("transcriptionProvider") ?? "elevenlabs";
 
     // ===================
@@ -222,6 +237,55 @@ public class WhispaConfig
 
     /// <summary>Langfuse host URL (optional, for self-hosted Langfuse)</summary>
     public string? LangfuseHost => _config.Get("langfuseHost");
+
+    /// <summary>Whether to create RDS I/O alarms (default: enabled when SNS/email config is provided)</summary>
+    public bool EnableRdsIoAlarms =>
+        _config.GetBoolean("enableRdsIoAlarms")
+        ?? (!string.IsNullOrWhiteSpace(AlarmSnsTopicArn)
+            || !string.IsNullOrWhiteSpace(AlarmEmailAddress));
+
+    /// <summary>Existing SNS topic ARN for CloudWatch alarm notifications (optional)</summary>
+    public string? AlarmSnsTopicArn => _config.Get("alarmSnsTopicArn");
+
+    /// <summary>Email address to subscribe to the RDS alarm SNS topic (optional)</summary>
+    public string? AlarmEmailAddress => _config.Get("alarmEmailAddress");
+
+    /// <summary>DiskQueueDepth alarm threshold (default: 10)</summary>
+    public double RdsDiskQueueDepthAlarmThreshold => _config.GetDouble("rdsDiskQueueDepthAlarmThreshold") ?? 10;
+
+    /// <summary>ReadIOPS alarm threshold for RDS instances (default: 1000)</summary>
+    public double RdsReadIopsAlarmThreshold => _config.GetDouble("rdsReadIopsAlarmThreshold") ?? 1000;
+
+    /// <summary>WriteIOPS alarm threshold for RDS instances (default: 1000)</summary>
+    public double RdsWriteIopsAlarmThreshold => _config.GetDouble("rdsWriteIopsAlarmThreshold") ?? 1000;
+
+    /// <summary>VolumeReadIOPs alarm threshold for Aurora clusters (default: 1000)</summary>
+    public double RdsVolumeReadIopsAlarmThreshold => _config.GetDouble("rdsVolumeReadIopsAlarmThreshold") ?? 1000;
+
+    /// <summary>VolumeWriteIOPS alarm threshold for Aurora clusters (default: 1000)</summary>
+    public double RdsVolumeWriteIopsAlarmThreshold => _config.GetDouble("rdsVolumeWriteIopsAlarmThreshold") ?? 1000;
+
+    /// <summary>Free storage space threshold in bytes for standard RDS instances (default: 5 GiB)</summary>
+    public double RdsFreeStorageSpaceAlarmThreshold => _config.GetDouble("rdsFreeStorageSpaceAlarmThreshold")
+        ?? 5d * 1024 * 1024 * 1024;
+
+    /// <summary>Freeable memory threshold in bytes for RDS instances (default: 256 MiB)</summary>
+    public double RdsFreeableMemoryAlarmThreshold => _config.GetDouble("rdsFreeableMemoryAlarmThreshold")
+        ?? 256d * 1024 * 1024;
+
+    /// <summary>CPU utilization percentage threshold for RDS instances (default: 80)</summary>
+    public double RdsCpuUtilizationAlarmThreshold => _config.GetDouble("rdsCpuUtilizationAlarmThreshold") ?? 80;
+
+    /// <summary>Free local storage threshold in bytes for Aurora clusters (default: 2 GiB)</summary>
+    public double RdsFreeLocalStorageAlarmThreshold => _config.GetDouble("rdsFreeLocalStorageAlarmThreshold")
+        ?? 2d * 1024 * 1024 * 1024;
+
+    /// <summary>Aurora volume bytes left threshold in bytes for Aurora MySQL clusters (default: 10 GiB)</summary>
+    public double AuroraVolumeBytesLeftTotalAlarmThreshold => _config.GetDouble("auroraVolumeBytesLeftTotalAlarmThreshold")
+        ?? 10d * 1024 * 1024 * 1024;
+
+    /// <summary>Aurora MySQL cluster identifiers for AuroraVolumeBytesLeftTotal alarms (optional)</summary>
+    public string[] AuroraMySqlClusterIdentifiers => _config.GetObject<string[]>("auroraMySqlClusterIdentifiers") ?? [];
 
     // ===================
     // AWS Connect Integration (Optional)

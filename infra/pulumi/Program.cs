@@ -49,7 +49,8 @@ return await Deployment.RunAsync(() =>
     // ===================
 
     // Monitoring (CloudWatch log groups)
-    var monitoring = new MonitoringStack("monitoring", config);
+    var monitoring = new MonitoringStack("monitoring", config,
+        managedDbInstanceIdentifier: database.DbInstanceIdentifier);
 
     // IAM (roles and policies)
     var iam = new IamStack("iam", config,
