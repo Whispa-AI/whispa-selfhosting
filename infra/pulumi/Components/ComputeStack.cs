@@ -318,6 +318,10 @@ public class ComputeStack : ComponentResource
                         // Transcription
                         new { name = "TELEPHONY_TRANSCRIPTION_PROVIDER", value = config.TranscriptionProvider },
 
+                        // Auto-seeding: entrypoint.prod.sh reads SEED_SCENARIOS after migrations.
+                        // Empty = no seeding. "all" = every scenario. "a,b,c" = filter list.
+                        new { name = "SEED_SCENARIOS", value = config.SeedScenarios ?? "" },
+
                         // Feature flags
                         new { name = "SHOW_SIGNUP_CTA", value = config.ShowSignupCta.ToString().ToLower() },
 

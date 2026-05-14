@@ -213,6 +213,17 @@ public class WhispaConfig
     public string TranscriptionProvider => _config.Get("transcriptionProvider") ?? "elevenlabs";
 
     // ===================
+    // Seeding
+    // ===================
+
+    /// <summary>
+    /// Comma-separated scenario names to auto-seed on container startup (after migrations).
+    /// Empty/null = no auto-seeding. "all" = seed every scenario. "a,b,c" = seed those filters.
+    /// Maps to the SEED_SCENARIOS env var consumed by entrypoint.prod.sh.
+    /// </summary>
+    public string? SeedScenarios => _config.Get("seedScenarios");
+
+    // ===================
     // Feature Flags
     // ===================
 
