@@ -82,11 +82,39 @@ public class WhispaConfig
     // ECS Configuration
     // ===================
 
-    /// <summary>Backend container image (default: ghcr.io/whispa-ai/whispa-backend:latest)</summary>
-    public string BackendImage => _config.Get("backendImage") ?? "ghcr.io/whispa-ai/whispa-backend:latest";
+    /// <summary>
+    /// App image version to deploy (e.g. "0.0.71"). Defaults to the tag this infra
+    /// release was built for (<see cref="BuildInfo.DefaultImageTag"/>). Set
+    /// whispa:imageTag to pin a specific version without touching the full image refs.
+    /// </summary>
+    public string ImageTag => _config.Get("imageTag") ?? BuildInfo.DefaultImageTag;
 
-    /// <summary>Frontend container image (default: ghcr.io/whispa-ai/whispa-frontend:latest)</summary>
-    public string FrontendImage => _config.Get("frontendImage") ?? "ghcr.io/whispa-ai/whispa-frontend:latest";
+    /// <summary>Container registry + org prefix for app images (default: ghcr.io/whispa-ai)</summary>
+    public string ImageRegistry => _config.Get("imageRegistry") ?? "ghcr.io/whispa-ai";
+
+    /// <summary>
+    /// Backend container image. An explicit whispa:backendImage full ref wins;
+    /// otherwise it is derived from <see cref="ImageRegistry"/> + <see cref="ImageTag"/>.
+    /// </summary>
+    public string BackendImage => _config.Get("backendImage")
+        ?? $"{ImageRegistry}/whispa-backend:{ResolveImageTag()}";
+
+    /// <summary>
+    /// Frontend container image. An explicit whispa:frontendImage full ref wins;
+    /// otherwise it is derived from <see cref="ImageRegistry"/> + <see cref="ImageTag"/>.
+    /// </summary>
+    public string FrontendImage => _config.Get("frontendImage")
+        ?? $"{ImageRegistry}/whispa-frontend:{ResolveImageTag()}";
+
+    /// <summary>
+    /// The un-released "0.0.0-dev" placeholder resolves to ":latest" so an unstamped
+    /// local checkout still pulls a runnable image; a released checkout (or an explicit
+    /// whispa:imageTag) resolves to the real version.
+    /// </summary>
+    private string ResolveImageTag() =>
+        ImageTag == BuildInfo.DefaultImageTag && BuildInfo.DefaultImageTag == "0.0.0-dev"
+            ? "latest"
+            : ImageTag;
 
     /// <summary>Backend CPU units (default: 512 = 0.5 vCPU)</summary>
     public int BackendCpu => _config.GetInt32("backendCpu") ?? 512;

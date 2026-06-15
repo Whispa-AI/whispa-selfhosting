@@ -127,13 +127,17 @@ config:
   # whispa:desiredCount: "1"         # Task replicas (use 2+ for production HA)
 
   # ===================
-  # Optional - Container Images
+  # Optional - App Version
   # ===================
 
-  # Defaults to latest from Whispa's public GHCR
-  # Pin to a specific version for production
-  # whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:v1.0.0
-  # whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:v1.0.0
+  # The infra you checked out already defaults to its matching app version, so
+  # you normally set nothing here. Set imageTag only to pin a different version:
+  # whispa:imageTag: "0.0.71"
+  #
+  # Advanced: override the registry, or the full image refs (these win over imageTag):
+  # whispa:imageRegistry: ghcr.io/whispa-ai
+  # whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:0.0.71
+  # whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:0.0.71
 
   # ===================
   # Optional - AWS Connect Integration

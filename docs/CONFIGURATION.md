@@ -73,19 +73,28 @@ The deployment always creates 2 AZs, a NAT Gateway, and public/private subnets.
 | `whispa:frontendMemory` | `512` | Frontend memory in MB |
 | `whispa:desiredCount` | `1` | Number of task replicas (applies to both backend and frontend) |
 
-## Container Images
+## App Version (Container Images)
+
+The infra you deploy already defaults to the app version it was released with, so
+in the common case you set **nothing** here — checking out infra at tag `v0.0.71`
+deploys app images `0.0.71`. Use the keys below only to override.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:backendImage` | `ghcr.io/whispa-ai/whispa-backend:latest` | Backend container image |
-| `whispa:frontendImage` | `ghcr.io/whispa-ai/whispa-frontend:latest` | Frontend container image |
+| `whispa:imageTag` | the version this infra release was built for | App version to deploy (e.g. `0.0.71`). The simple way to pin a specific version. |
+| `whispa:imageRegistry` | `ghcr.io/whispa-ai` | Registry + org prefix for the app images |
+| `whispa:backendImage` | derived from `imageRegistry` + `imageTag` | Full backend image ref (advanced — wins over `imageTag`) |
+| `whispa:frontendImage` | derived from `imageRegistry` + `imageTag` | Full frontend image ref (advanced — wins over `imageTag`) |
 
-To upgrade versions, change the image tag:
+To upgrade, move to a newer infra release (recommended — keeps infra and app in
+lockstep) or pin a specific app version:
 
 ```yaml
-whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:v1.2.0
-whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:v1.2.0
+whispa:imageTag: "0.0.72"
 ```
+
+Precedence (highest first): `backendImage`/`frontendImage` → `imageTag` → the
+version baked into the infra release.
 
 ## DNS & SSL
 
