@@ -2,10 +2,34 @@
 
 All notable changes to the Whispa Self-Hosting repository will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+> **Versioning:** from the next release onward, this repo tracks the **product
+> version** (the `0.0.x` line shared with the `whispa-backend`/`whispa-frontend`
+> images), so an infra tag `v0.0.N` deploys app images `0.0.N`. This supersedes the
+> standalone `1.0.0` baseline below.
 
 ## [Unreleased]
+
+### Added
+- `whispa:imageTag` / `whispa:imageRegistry` — pin the app version with a single
+  key; checking out infra at a release tag deploys the matching images by default.
+- AWS Bedrock LLM support and per-analyzer model configuration (`whispa:bedrockRegion`,
+  `whispa:llmModelDefault`, and per-analyzer overrides).
+- AWS Connect integration: Contact Flow Lambda + custom resource prefix support.
+- EventBridge consumer Lambda for Connect contact events.
+- AssemblyAI streaming transcription provider option.
+- QA scorecard model configuration (`whispa:llmModelScorecard`).
+- `whispa:seedScenarios` — auto-seed catalog scenarios on container startup.
+- RDS I/O CloudWatch alarms (configurable thresholds + SNS/email notification).
+- Superuser password stored as a dedicated secret with IAM read access.
+
+### Changed
+- Superuser email and password are now **mandatory** (bootstrap admin is created on
+  first deploy).
+- IAM permissions allow Bedrock **cross-region inference profiles**.
+- Documentation: config reference synced with code, client pre-deployment checklist,
+  SSL auto-provisioning and external-DNS/STT clarifications.
 
 ## [1.0.0] - 2026-01-29
 

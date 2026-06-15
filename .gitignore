@@ -1,6 +1,8 @@
-# Pulumi
+# Pulumi / .NET build output
 infra/pulumi/bin/
 infra/pulumi/obj/
+infra/pulumi.tests/bin/
+infra/pulumi.tests/obj/
 infra/pulumi/Pulumi.*.yaml
 !infra/pulumi/Pulumi.yaml
 !infra/pulumi/Pulumi.*.yaml.example
