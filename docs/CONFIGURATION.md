@@ -131,16 +131,20 @@ These settings are not currently configurable via Pulumi config.
 
 **The common case needs no model config at all.** With the default provider
 (`bedrock`), the deployment grants Bedrock IAM permissions automatically and the
-backend picks a region-appropriate Claude Haiku 4.5 cross-region inference profile
-(no API key, prompt-caching capable). Set nothing and it works.
+backend runs **Whispa's recommended per-analyzer model set** (no API key needed).
+New analyzers ship with a recommended model in each release, so you never have to
+add config for them. Set nothing and it works.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:llmProvider` | `bedrock` | LLM provider: `bedrock` (recommended, IAM-only), `openrouter`, or `openai`. Determines the default model and whether Bedrock IAM permissions are granted. |
+| `whispa:llmProvider` | `bedrock` | LLM provider: `bedrock` (recommended, IAM-only), `openrouter`, or `openai`. Determines the default models and whether Bedrock IAM permissions are granted. |
 | `whispa:bedrockRegion` | deploy region (`aws:region`) | Region for Bedrock API calls. Only override if Bedrock model availability requires a different region than your deployment. |
 
-The backend resolves the default model from the region: `ap-southeast-2`/`-4` →
-`au.` (Australia-resident), other `ap-*` → `apac.`, `eu-*` → `eu.`, otherwise `us.`.
+The recommended models are defined in the backend image (so they move with each
+release). In AU regions (`ap-southeast-2`/`-4`) that's a cost-optimized open-weight
+mix with Claude for the scorecard; other Bedrock regions, where those open-weight
+models aren't available, fall back to a region-appropriate Claude Haiku 4.5
+inference profile (`apac.`/`eu.`/`us.`).
 
 ### Overriding models (advanced)
 
