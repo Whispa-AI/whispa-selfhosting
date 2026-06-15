@@ -24,18 +24,20 @@ Before you begin, ensure you have:
 - [ ] [Pulumi CLI](https://www.pulumi.com/docs/install/) installed
 - [ ] [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) installed
 - [ ] AWS CLI configured with credentials
-- [ ] An LLM API key (OpenRouter recommended)
 
-**Speech-to-text:** AWS Transcribe is recommended (uses IAM role, no API key needed). Alternatively, you can use Deepgram or ElevenLabs.
+**LLM:** Works out of the box with **AWS Bedrock** — no API key (it uses the ECS task's IAM role) and **no model configuration needed**; the backend ships Whispa's recommended model per analyzer. To override a model or use OpenRouter instead, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
+**Speech-to-text:** AWS Transcribe is recommended (uses IAM role, no API key needed). Alternatively, you can use AssemblyAI, Deepgram, or ElevenLabs.
 
 See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
 
 ### Deployment Steps
 
-1. **Clone this repository**
+1. **Clone this repository and check out the release you want**
    ```bash
    git clone https://github.com/Whispa-AI/whispa-selfhosting.git
    cd whispa-selfhosting
+   git checkout v0.0.73   # the latest release tag — deploys the matching app images by default
    ```
 
 2. **Configure your stack**
@@ -112,6 +114,8 @@ config:
   whispa:dbInstanceClass: db.t3.medium
   whispa:backendCpu: 512
   whispa:backendMemory: 1024
+  # LLM: nothing to set — defaults to AWS Bedrock with Whispa's recommended models.
+  # App version: defaults to the release you checked out; pin with whispa:imageTag.
 ```
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
@@ -141,8 +145,10 @@ Costs vary based on usage, region, and configuration choices.
 
 This repository is provided for Whispa customers under the terms of your Whispa license agreement.
 
-## Version
+## Versioning
 
-Current version: See [CHANGELOG.md](CHANGELOG.md)
-
-Compatible with Whispa images: `v1.0.0+`
+This repo and the Whispa app images move in lockstep: each release tag (`vX.Y.Z`)
+deploys the matching `whispa-backend`/`whispa-frontend` images (`X.Y.Z`) by default.
+To upgrade, check out a newer tag and run `pulumi up` — the app version follows
+automatically. To pin or override the app version independently, set
+`whispa:imageTag`. See [CHANGELOG.md](CHANGELOG.md) and [docs/UPGRADES.md](docs/UPGRADES.md).
