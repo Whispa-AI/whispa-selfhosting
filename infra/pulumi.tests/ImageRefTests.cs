@@ -58,10 +58,12 @@ public class ImageRefTests
     [Fact]
     public void Backcompat_UnreleasedDefault_Equals_OldHardcodedDefault()
     {
-        // Proves the Phase 1 no-op claim: on an un-stamped tree with nothing set,
-        // the derived ref equals the previous hardcoded "...:latest".
-        var backend = ImageRef.Resolve(null, null, Registry, "whispa-backend", BuildInfo.DefaultImageTag);
-        var frontend = ImageRef.Resolve(null, null, Registry, "whispa-frontend", BuildInfo.DefaultImageTag);
+        // Proves the Phase 1 no-op claim: on an un-stamped (dev) tree with nothing
+        // set, the derived ref equals the previous hardcoded "...:latest". Uses the
+        // dev sentinel rather than the live BuildInfo.DefaultImageTag, which is a real
+        // version on a released checkout (main tracks the last release).
+        var backend = ImageRef.Resolve(null, null, Registry, "whispa-backend", ImageRef.DevPlaceholderTag);
+        var frontend = ImageRef.Resolve(null, null, Registry, "whispa-frontend", ImageRef.DevPlaceholderTag);
 
         Assert.Equal("ghcr.io/whispa-ai/whispa-backend:latest", backend);
         Assert.Equal("ghcr.io/whispa-ai/whispa-frontend:latest", frontend);
