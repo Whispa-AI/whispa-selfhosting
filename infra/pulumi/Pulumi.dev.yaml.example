@@ -64,23 +64,23 @@ config:
   # LLM Configuration
   # ===================
 
-  # Option A: AWS Bedrock (recommended for self-hosting — uses IAM, no API key needed)
-  # Set bedrockRegion to enable Bedrock IAM permissions
-  # whispa:bedrockRegion: ap-southeast-2
-  # whispa:llmModelDefault: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # Default is AWS Bedrock — no API key, no model config needed. The deployment
+  # grants Bedrock IAM permissions and the backend picks a region-appropriate
+  # Claude Haiku 4.5 inference profile automatically. Leave everything below unset
+  # for the common case.
+  #
+  # whispa:llmProvider: bedrock          # bedrock (default) | openrouter | openai
+  # whispa:bedrockRegion: ap-southeast-2 # only if Bedrock must run in a different region than aws:region
 
-  # Option B: OpenRouter (requires API key)
+  # OpenRouter instead of Bedrock (requires an API key + an explicit model):
+  # whispa:llmProvider: openrouter
   # whispa:llmModelDefault: openrouter/google/gemini-2.5-flash
   # Set with: pulumi config set --secret whispa:llmApiKey YOUR_KEY
 
-  # Per-analyzer model overrides (optional — falls back to llmModelDefault)
-  # whispa:llmModelActionCards: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
-  # whispa:llmModelWorkflow: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
-  # whispa:llmModelSuggestedResponses: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
-  # whispa:llmModelSentiment: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
-  # whispa:llmModelCoaching: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
-  # whispa:llmModelSummary: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
-  # whispa:llmModelClassification: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+  # Advanced — pin a specific model or override per analyzer (provider prefix required;
+  # use the inference-profile IDs from your AWS Bedrock console):
+  # whispa:llmModelDefault: bedrock/au.anthropic.claude-haiku-4-5-20251001-v1:0
+  # whispa:llmModelSummary: bedrock/au.anthropic.claude-sonnet-4-6-...
 
   # ===================
   # Optional - Resource Naming

@@ -127,34 +127,37 @@ These settings are not currently configurable via Pulumi config.
 - `assemblyai`: Requires `whispa:assemblyaiApiKey`
 - `elevenlabs`: Requires `whispa:elevenlabsApiKey`
 
-## LLM Model Configuration
+## LLM Configuration
 
-Configure which LLM model each analyzer uses. Models are specified with a provider prefix (e.g., `bedrock/`, `openrouter/`).
+**The common case needs no model config at all.** With the default provider
+(`bedrock`), the deployment grants Bedrock IAM permissions automatically and the
+backend picks a region-appropriate Claude Haiku 4.5 cross-region inference profile
+(no API key, prompt-caching capable). Set nothing and it works.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:llmModelDefault` | (none) | Default model used as fallback for all analyzers |
-| `whispa:llmModelActionCards` | (uses default) | Model for action cards analyzer |
-| `whispa:llmModelWorkflow` | (uses default) | Model for workflow progress analyzer |
-| `whispa:llmModelSuggestedResponses` | (uses default) | Model for suggested responses analyzer |
-| `whispa:llmModelSentiment` | (uses default) | Model for sentiment analyzer |
-| `whispa:llmModelCoaching` | (uses default) | Model for post-call coaching feedback |
-| `whispa:llmModelSummary` | (uses default) | Model for post-call summary generation |
-| `whispa:llmModelClassification` | (uses default) | Model for call classification |
+| `whispa:llmProvider` | `bedrock` | LLM provider: `bedrock` (recommended, IAM-only), `openrouter`, or `openai`. Determines the default model and whether Bedrock IAM permissions are granted. |
+| `whispa:bedrockRegion` | deploy region (`aws:region`) | Region for Bedrock API calls. Only override if Bedrock model availability requires a different region than your deployment. |
+
+The backend resolves the default model from the region: `ap-southeast-2`/`-4` →
+`au.` (Australia-resident), other `ap-*` → `apac.`, `eu-*` → `eu.`, otherwise `us.`.
+
+### Overriding models (advanced)
+
+Pin a specific model (provider prefix required), globally or per analyzer:
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:llmModelDefault` | derived from `llmProvider` + region | Default model for all analyzers |
+| `whispa:llmModelActionCards` / `…Workflow` / `…SuggestedResponses` / `…Sentiment` / `…Coaching` / `…Summary` / `…Classification` / `…Scorecard` | (uses default) | Per-analyzer overrides |
 
 **Provider prefixes:**
-- `bedrock/` — AWS Bedrock (uses IAM role, requires `bedrockRegion`). Example: `bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0`
+- `bedrock/` — AWS Bedrock (IAM role, no API key). Example: `bedrock/au.anthropic.claude-haiku-4-5-20251001-v1:0`
 - `openrouter/` — OpenRouter (requires `llmApiKey`). Example: `openrouter/google/gemini-2.5-flash`
 
-## AWS Bedrock Configuration
-
-Use AWS Bedrock as your LLM provider to keep all AI traffic within your AWS account.
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `whispa:bedrockRegion` | (none) | AWS region for Bedrock API calls. Setting this enables Bedrock IAM permissions on the ECS task role |
-
-**Note:** When `bedrockRegion` is set, the deployment automatically grants `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` permissions to the ECS task role. No API key is needed — authentication uses the task's IAM role.
+**Note:** When `llmProvider` is `bedrock` (the default), the deployment grants
+`bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` to the ECS task
+role automatically — no API key needed.
 
 ## Email Configuration
 

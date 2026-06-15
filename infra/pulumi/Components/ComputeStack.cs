@@ -345,8 +345,11 @@ public class ComputeStack : ComponentResource
                         new { name = "LLM_MODEL_CLASSIFICATION", value = config.LlmModelClassification ?? "" },
                         new { name = "LLM_MODEL_SCORECARD", value = config.LlmModelScorecard ?? "" },
 
-                        // AWS Bedrock (region for bedrock/* model prefixes)
-                        new { name = "AWS_BEDROCK_REGION", value = config.BedrockRegion ?? "" },
+                        // LLM provider (drives the backend's zero-config default model)
+                        new { name = "LLM_PROVIDER", value = config.LlmProvider },
+
+                        // AWS Bedrock (region for bedrock/* model prefixes; defaults to deploy region)
+                        new { name = "AWS_BEDROCK_REGION", value = config.BedrockRegion },
 
                         // AWS service regions (default to deployment region)
                         new { name = "AWS_TRANSCRIBE_REGION", value = config.AwsRegion },

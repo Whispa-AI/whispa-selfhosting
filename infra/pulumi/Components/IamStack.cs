@@ -243,8 +243,10 @@ public class IamStack : ComponentResource
             Policy = ecsExecPolicy,
         }, new CustomResourceOptions { Parent = this });
 
-        // AWS Bedrock policy (for bedrock/* LLM models and cross-region inference profiles)
-        if (!string.IsNullOrWhiteSpace(config.BedrockRegion))
+        // AWS Bedrock policy (for bedrock/* LLM models and cross-region inference profiles).
+        // Gated on the provider, not on bedrockRegion (which now always has a value):
+        // the default provider is Bedrock, so a zero-config deployment gets these grants.
+        if (config.UseBedrock)
         {
             var bedrockPolicy = Output.Create(GetCallerIdentity.InvokeAsync())
                 .Apply(identity => JsonSerializer.Serialize(new

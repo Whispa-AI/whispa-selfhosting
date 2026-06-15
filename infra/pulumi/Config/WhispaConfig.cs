@@ -213,8 +213,19 @@ public class WhispaConfig
     // AWS Bedrock Configuration
     // ===================
 
-    /// <summary>AWS region for Bedrock API calls (default: same as deployment region)</summary>
-    public string? BedrockRegion => _config.Get("bedrockRegion");
+    /// <summary>
+    /// Default LLM provider passed to the backend (bedrock | openrouter | openai).
+    /// "bedrock" (default) needs no API key and works with zero model config —
+    /// the backend derives a region-appropriate Claude default. Set to a
+    /// non-Bedrock provider only if you supply llmApiKey + model overrides.
+    /// </summary>
+    public string LlmProvider => _config.Get("llmProvider") ?? "bedrock";
+
+    /// <summary>Whether this deployment uses AWS Bedrock for LLM calls (drives IAM grants).</summary>
+    public bool UseBedrock => string.Equals(LlmProvider, "bedrock", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>AWS region for Bedrock API calls (defaults to the deployment region).</summary>
+    public string BedrockRegion => _config.Get("bedrockRegion") ?? AwsRegion;
 
     // ===================
     // Transcription Settings
