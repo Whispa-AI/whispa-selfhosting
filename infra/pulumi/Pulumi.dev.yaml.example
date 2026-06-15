@@ -149,6 +149,30 @@ config:
   # whispa:kvsStreamPrefix: whispa-connect
 
   # ===================
+  # Optional - AI Voice Calls (LiveKit) + self-hosted streaming STT
+  # ===================
+
+  # Outbound AI-collector voice calls run an in-process LiveKit Agents worker.
+  # It stays DORMANT unless liveKitUrl + both secrets below are all set.
+  # whispa:liveKitUrl: wss://your-project.livekit.cloud
+  # Secrets (set via CLI, never stored in YAML):
+  #   pulumi config set --secret whispa:liveKitApiKey    YOUR_LIVEKIT_API_KEY
+  #   pulumi config set --secret whispa:liveKitApiSecret YOUR_LIVEKIT_API_SECRET
+  # Outbound dialing (Twilio Elastic SIP trunk bound to a LiveKit outbound trunk):
+  # whispa:liveKitSipOutboundTrunkId: ST_xxxxxxxxxxxx
+  # Worker name — defaults to "whispa-ai-collector-<stack>". Keep it unique per
+  # environment: workers sharing a name against one LiveKit project form a single
+  # pool and jobs round-robin across them (dev could steal prod's calls).
+  # whispa:liveKitAiAgentName: whispa-ai-collector-dev
+
+  # Streaming STT endpoint. Unset = AssemblyAI managed cloud. Point at a self-hosted
+  # Universal-Streaming deployment for data residency (scheme+host[:port], no path).
+  # The backend ECS task must have a network route + security-group egress to it.
+  # whispa:assemblyaiStreamingBaseUrl: wss://aai-streaming.internal:8080
+  # For self-hosted, assemblyaiApiKey is the license-proxy auth value (often "self-hosted"):
+  #   pulumi config set --secret whispa:assemblyaiApiKey self-hosted
+
+  # ===================
   # Optional - Feature Flags
   # ===================
 

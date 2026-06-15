@@ -354,6 +354,20 @@ public class ComputeStack : ComponentResource
                         // AWS service regions (default to deployment region)
                         new { name = "AWS_TRANSCRIBE_REGION", value = config.AwsRegion },
                         new { name = "AWS_CONNECT_REGION", value = config.AwsRegion },
+
+                        // AI voice calls (LiveKit). An empty LIVEKIT_URL keeps the in-process
+                        // worker dormant (run_worker short-circuits), so these are safe to emit
+                        // unconditionally — the worker only registers once URL + key + secret are set.
+                        new { name = "LIVEKIT_URL", value = config.LiveKitUrl ?? "" },
+                        new { name = "LIVEKIT_SIP_OUTBOUND_TRUNK_ID", value = config.LiveKitSipOutboundTrunkId ?? "" },
+                        // Per-environment default so a dev worker never shares a job pool with prod
+                        // or a developer's laptop (jobs round-robin across a shared agent name).
+                        new { name = "LIVEKIT_AI_AGENT_NAME", value = config.LiveKitAiAgentName ?? $"whispa-ai-collector-{config.Environment}" },
+
+                        // Streaming STT endpoint. Falls back to AssemblyAI's managed cloud; set
+                        // assemblyaiStreamingBaseUrl to a self-hosted endpoint for data residency.
+                        // (Must be non-empty: an empty value would override the backend default.)
+                        new { name = "ASSEMBLYAI_STREAMING_BASE_URL", value = config.AssemblyaiStreamingBaseUrl ?? "wss://streaming.assemblyai.com" },
                     },
                     secrets = BuildSecretsList(
                         appSecretArn,
@@ -364,6 +378,7 @@ public class ComputeStack : ComponentResource
                         config.HasDeepgramApiKey,
                         config.HasElevenlabsApiKey,
                         config.HasAssemblyaiApiKey,
+                        config.HasLiveKit,
                         config.HasLangfuseSecretKey,
                         config.EnableAwsConnect
                     ),
@@ -577,6 +592,7 @@ public class ComputeStack : ComponentResource
         bool hasDeepgram,
         bool hasElevenlabs,
         bool hasAssemblyai,
+        bool hasLiveKit,
         bool hasLangfuseSecretKey,
         bool enableAwsConnect
     )
@@ -616,6 +632,13 @@ public class ComputeStack : ComponentResource
         if (hasAssemblyai)
         {
             secrets.Add(new { name = "ASSEMBLYAI_API_KEY", valueFrom = $"{apiSecretArn}:ASSEMBLYAI_API_KEY::" });
+        }
+
+        // LiveKit credentials for AI voice calls (both required for the worker to register)
+        if (hasLiveKit)
+        {
+            secrets.Add(new { name = "LIVEKIT_API_KEY", valueFrom = $"{apiSecretArn}:LIVEKIT_API_KEY::" });
+            secrets.Add(new { name = "LIVEKIT_API_SECRET", valueFrom = $"{apiSecretArn}:LIVEKIT_API_SECRET::" });
         }
 
         if (hasLangfuseSecretKey)

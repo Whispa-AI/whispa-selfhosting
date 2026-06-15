@@ -168,7 +168,9 @@ public class SecretsStack : ComponentResource
             config.DeepgramApiKey ?? Output.Create(""),
             config.ElevenlabsApiKey ?? Output.Create(""),
             config.AssemblyaiApiKey ?? Output.Create(""),
-            config.LangfuseSecretKey ?? Output.Create("")
+            config.LangfuseSecretKey ?? Output.Create(""),
+            config.LiveKitApiKey ?? Output.Create(""),
+            config.LiveKitApiSecret ?? Output.Create("")
         ).Apply(keys =>
         {
             var dict = new Dictionary<string, string>();
@@ -188,6 +190,12 @@ public class SecretsStack : ComponentResource
 
             if (!string.IsNullOrEmpty(keys[4]))
                 dict["LANGFUSE_SECRET_KEY"] = keys[4];
+
+            if (!string.IsNullOrEmpty(keys[5]))
+                dict["LIVEKIT_API_KEY"] = keys[5];
+
+            if (!string.IsNullOrEmpty(keys[6]))
+                dict["LIVEKIT_API_SECRET"] = keys[6];
 
             return System.Text.Json.JsonSerializer.Serialize(dict);
         });

@@ -234,6 +234,39 @@ public class WhispaConfig
     /// <summary>Telephony transcription provider: elevenlabs, deepgram, assemblyai, or amazon (default: elevenlabs)</summary>
     public string TranscriptionProvider => _config.Get("transcriptionProvider") ?? "elevenlabs";
 
+    /// <summary>
+    /// AssemblyAI streaming base URL (scheme+host[:port], no path). Point at a self-hosted
+    /// Universal-Streaming deployment for data residency; leave unset to use AssemblyAI's
+    /// managed cloud. Both streaming paths (agent-assist WebSocket + AI-call plugin) append "/v3/ws".
+    /// </summary>
+    public string? AssemblyaiStreamingBaseUrl => _config.Get("assemblyaiStreamingBaseUrl");
+
+    // ===================
+    // AI Voice Calls (LiveKit)
+    // ===================
+
+    /// <summary>LiveKit project URL (wss://...). When unset, the in-process AI-call worker stays dormant.</summary>
+    public string? LiveKitUrl => _config.Get("liveKitUrl");
+
+    /// <summary>LiveKit API key (secret).</summary>
+    public Output<string>? LiveKitApiKey => _config.GetSecret("liveKitApiKey");
+
+    /// <summary>LiveKit API secret (secret).</summary>
+    public Output<string>? LiveKitApiSecret => _config.GetSecret("liveKitApiSecret");
+
+    /// <summary>Whether LiveKit credentials are configured (gates secret injection + the AI-call worker).</summary>
+    public bool HasLiveKit => _config.Get("liveKitApiKey") != null && _config.Get("liveKitApiSecret") != null;
+
+    /// <summary>LiveKit outbound SIP trunk ID (ST_...) for dialing out via Twilio. Optional.</summary>
+    public string? LiveKitSipOutboundTrunkId => _config.Get("liveKitSipOutboundTrunkId");
+
+    /// <summary>
+    /// Worker name the AI-call worker registers under. MUST be unique per environment: workers
+    /// sharing a name against one LiveKit project form a single pool and jobs round-robin across
+    /// them. Defaults to "whispa-ai-collector-{environment}" so stacks never collide by accident.
+    /// </summary>
+    public string? LiveKitAiAgentName => _config.Get("liveKitAiAgentName");
+
     // ===================
     // Seeding
     // ===================
