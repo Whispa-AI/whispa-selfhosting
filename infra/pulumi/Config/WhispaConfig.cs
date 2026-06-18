@@ -241,6 +241,19 @@ public class WhispaConfig
     /// </summary>
     public string? AssemblyaiStreamingBaseUrl => _config.Get("assemblyaiStreamingBaseUrl");
 
+    /// <summary>
+    /// Master switch for AssemblyAI dynamic keyterm biasing (STT_DYNAMIC_KEYTERMS_ENABLED).
+    /// Off by default — keyterm prompting is billed separately, so it's opt-in per deployment.
+    /// When on, the orchestrator pushes a scenario's seeded stt_keyterms after the first turn.
+    /// </summary>
+    public bool SttDynamicKeyterms => _config.GetBoolean("sttDynamicKeyterms") ?? false;
+
+    /// <summary>
+    /// Adds the built-in AU collections vocabulary to the keyterm set (STT_KEYTERM_DOMAIN_DEFAULTS).
+    /// Only has effect when sttDynamicKeyterms is enabled.
+    /// </summary>
+    public bool SttKeytermDomainDefaults => _config.GetBoolean("sttKeytermDomainDefaults") ?? false;
+
     // ===================
     // AI Voice Calls (LiveKit)
     // ===================
