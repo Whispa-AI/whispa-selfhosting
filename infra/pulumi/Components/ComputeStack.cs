@@ -368,6 +368,13 @@ public class ComputeStack : ComponentResource
                         // assemblyaiStreamingBaseUrl to a self-hosted endpoint for data residency.
                         // (Must be non-empty: an empty value would override the backend default.)
                         new { name = "ASSEMBLYAI_STREAMING_BASE_URL", value = config.AssemblyaiStreamingBaseUrl ?? "wss://streaming.assemblyai.com" },
+
+                        // STT dynamic keyterm biasing (AssemblyAI). Off by default — billed
+                        // separately, so opt-in per deployment via sttDynamicKeyterms. Domain
+                        // defaults add the built-in AU collections vocabulary on top of any
+                        // scenario-seeded stt_keyterms.
+                        new { name = "STT_DYNAMIC_KEYTERMS_ENABLED", value = config.SttDynamicKeyterms.ToString().ToLower() },
+                        new { name = "STT_KEYTERM_DOMAIN_DEFAULTS", value = config.SttKeytermDomainDefaults.ToString().ToLower() },
                     },
                     secrets = BuildSecretsList(
                         appSecretArn,

@@ -172,6 +172,12 @@ config:
   # For self-hosted, assemblyaiApiKey is the license-proxy auth value (often "self-hosted"):
   #   pulumi config set --secret whispa:assemblyaiApiKey self-hosted
 
+  # AssemblyAI dynamic keyterm biasing. Off by default (billed separately). When on,
+  # a scenario's seeded stt_keyterms are pushed to AssemblyAI after the first turn.
+  # whispa:sttDynamicKeyterms: "true"
+  # Adds the built-in AU collections vocabulary on top (only when the above is on):
+  # whispa:sttKeytermDomainDefaults: "true"
+
   # ===================
   # Optional - Feature Flags
   # ===================
