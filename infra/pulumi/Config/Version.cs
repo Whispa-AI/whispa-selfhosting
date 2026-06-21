@@ -12,5 +12,5 @@ namespace Whispa.Aws.Pulumi.Configuration;
 /// </summary>
 public static class BuildInfo
 {
-    public const string DefaultImageTag = "0.0.82";
+    public const string DefaultImageTag = "0.0.83";
 }
