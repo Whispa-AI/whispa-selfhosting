@@ -179,6 +179,24 @@ config:
   # whispa:sttKeytermDomainDefaults: "true"
 
   # ===================
+  # Optional - Generic env var passthrough (experimental / fast-moving config)
+  # ===================
+  # Inject extra backend env vars WITHOUT a code change or release — handy for
+  # experimental flags and new provider keys whose names may still change.
+  #
+  # Non-secret values -> extraEnv (visible in the task definition + logs):
+  # whispa:extraEnv:
+  #   SOME_FEATURE_FLAG: "true"
+  #   CARTESIA_VOICE_ID: "a0e99841-..."
+  #
+  # Secret values -> extraSecrets (stored in Secrets Manager, injected via `secrets`).
+  # Set each key on the CLI so the value is encrypted — never paste a key here:
+  #   pulumi config set --secret --path 'extraSecrets.CARTESIA_API_KEY' sk-cartesia-...
+  #
+  # Once a var is permanent, promote it to a typed WhispaConfig property (defaults +
+  # validation + discoverability). extraEnv/extraSecrets are the fast lane, not the home.
+
+  # ===================
   # Optional - Feature Flags
   # ===================
 

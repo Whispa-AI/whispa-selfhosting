@@ -268,7 +268,7 @@ public class ComputeStack : ComponentResource
             appSecretsArn,
             apiKeysSecretArn,
             superuserPasswordSecretArn
-        ).Apply(values =>
+        ).Apply(values => config.ExtraSecrets.Apply(extraSecrets =>
         {
             var dbHost = values.Item1;
             var dbPortValue = values.Item2;
@@ -375,7 +375,7 @@ public class ComputeStack : ComponentResource
                         // scenario-seeded stt_keyterms.
                         new { name = "STT_DYNAMIC_KEYTERMS_ENABLED", value = config.SttDynamicKeyterms.ToString().ToLower() },
                         new { name = "STT_KEYTERM_DOMAIN_DEFAULTS", value = config.SttKeytermDomainDefaults.ToString().ToLower() },
-                    },
+                    }.Concat(config.ExtraEnv.Select(kv => new { name = kv.Key, value = kv.Value })).ToArray(),
                     secrets = BuildSecretsList(
                         appSecretArn,
                         apiSecretArn,
@@ -388,7 +388,7 @@ public class ComputeStack : ComponentResource
                         config.HasLiveKit,
                         config.HasLangfuseSecretKey,
                         config.EnableAwsConnect
-                    ),
+                    ).Concat(extraSecrets.Keys.Select(k => new { name = k, valueFrom = $"{apiSecretArn}:{k}::" })).ToArray(),
                     logConfiguration = new
                     {
                         logDriver = "awslogs",
@@ -409,7 +409,7 @@ public class ComputeStack : ComponentResource
                     },
                 },
             });
-        });
+        }));
 
         var backendTaskDef = new TaskDefinition($"{name}-backend-task", new TaskDefinitionArgs
         {
