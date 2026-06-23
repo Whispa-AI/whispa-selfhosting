@@ -171,7 +171,7 @@ public class SecretsStack : ComponentResource
             config.LangfuseSecretKey ?? Output.Create(""),
             config.LiveKitApiKey ?? Output.Create(""),
             config.LiveKitApiSecret ?? Output.Create("")
-        ).Apply(keys =>
+        ).Apply(keys => config.ExtraSecrets.Apply(extra =>
         {
             var dict = new Dictionary<string, string>();
 
@@ -197,8 +197,14 @@ public class SecretsStack : ComponentResource
             if (!string.IsNullOrEmpty(keys[6]))
                 dict["LIVEKIT_API_SECRET"] = keys[6];
 
+            // Generic secret passthrough: each key becomes an env var sourced from this secret
+            // (see WhispaConfig.ExtraSecrets / ComputeStack). Keyed by the env var name.
+            foreach (var kv in extra)
+                if (!string.IsNullOrEmpty(kv.Value))
+                    dict[kv.Key] = kv.Value;
+
             return System.Text.Json.JsonSerializer.Serialize(dict);
-        });
+        }));
 
         new SecretVersion($"{name}-api-keys-version", new SecretVersionArgs
         {

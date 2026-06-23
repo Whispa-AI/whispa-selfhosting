@@ -179,6 +179,29 @@ public class WhispaConfig
     public bool HasAssemblyaiApiKey => _config.Get("assemblyaiApiKey") != null;
 
     // ===================
+    // Generic env var passthrough (experimental / fast-moving config)
+    // ===================
+
+    /// <summary>
+    /// Plaintext env passthrough: a map of NAME =&gt; value injected verbatim into the backend
+    /// container's environment. Use for non-secret, experimental, or fast-moving config without
+    /// changing infra code — set it in the stack yaml as `whispa:extraEnv`. NOTE: values are
+    /// visible in the task definition and logs; put API keys / secrets in ExtraSecrets instead.
+    /// </summary>
+    public Dictionary<string, string> ExtraEnv =>
+        _config.GetObject<Dictionary<string, string>>("extraEnv") ?? new Dictionary<string, string>();
+
+    /// <summary>
+    /// Secret env passthrough: a map of ENV_VAR_NAME =&gt; secret value. Values are stored in the
+    /// api-keys Secrets Manager secret and injected via the container's `secrets` block (never in
+    /// plaintext). Set per key with:
+    ///   pulumi config set --secret --path 'extraSecrets.CARTESIA_API_KEY' YOUR_KEY
+    /// </summary>
+    public Output<Dictionary<string, string>> ExtraSecrets =>
+        _config.GetSecretObject<Dictionary<string, string>>("extraSecrets")
+            ?? Output.Create(new Dictionary<string, string>());
+
+    // ===================
     // LLM Model Configuration
     // ===================
 
