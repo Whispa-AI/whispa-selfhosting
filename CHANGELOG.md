@@ -14,7 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Example **manual deploy pipeline** (`.github/workflows/deploy.yml`): pick an
   environment (`dev`/`test`), enter a version, press Run — stages the stack config
-  and runs `pulumi up` via AWS OIDC. Stack configs live in `stacks/`.
+  and runs `pulumi up` via AWS OIDC. Stack configs live in `stacks/`. Ships
+  commented-out (no trigger) so it doesn't run on the template repo; enable it in
+  your own repo.
 - `scripts/setup-github-oidc.sh` — one-time IAM/OIDC role setup for the pipeline.
 - `docs/CI-CD.md` — full guide to the deploy pipeline and how it ties to the
   version tags.

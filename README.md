@@ -66,6 +66,9 @@ Do the first deploy locally (it provisions DNS/certs/DB), then use the included
 **manual deploy pipeline** for version rollouts: pick an environment, type the
 version, press **Run workflow**. It runs `pulumi up` via AWS OIDC — no static keys.
 
+The workflow ships **disabled** (commented out) so it doesn't run on this template
+repo — enable it in your own repo during setup.
+
 - Workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 - Setup + usage: [docs/CI-CD.md](docs/CI-CD.md)
 

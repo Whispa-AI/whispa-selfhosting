@@ -19,6 +19,10 @@ You: Actions ▸ Deploy Whispa ▸ Run workflow (stack=dev, version=0.0.89)
 - Stack config: [`stacks/`](../stacks/) (see [stacks/README.md](../stacks/README.md))
 - OIDC setup script: [`scripts/setup-github-oidc.sh`](../scripts/setup-github-oidc.sh)
 
+> **The workflow ships disabled (fully commented out)** so it never runs on the
+> upstream template repo. Enable it in your own repo as part of the
+> [one-time setup](#one-time-setup) below.
+
 ---
 
 ## How it works
@@ -125,6 +129,13 @@ pulumi up
 Copy the final `Pulumi.dev.yaml` (now carrying the `encryptedkey:` and any
 `secure:` blocks) back to `stacks/dev.yaml` and commit it. See
 [DEPLOYMENT.md](DEPLOYMENT.md) for the full first-time walkthrough.
+
+### 6. Enable the workflow
+
+The workflow ships **commented out** so it doesn't run on the upstream repo.
+In your repo, enable it by stripping the leading `# ` from the body of
+`.github/workflows/deploy.yml` (everything under the header), then commit. After
+that it appears under the **Actions** tab as **Deploy Whispa**.
 
 ---
 
