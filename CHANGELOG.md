@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.90] - 2026-06-24
+
 ### Added
 - Example **manual deploy pipeline** (`.github/workflows/deploy.yml`): pick an
   environment (`dev`/`test`), enter a version, press Run — stages the stack config
