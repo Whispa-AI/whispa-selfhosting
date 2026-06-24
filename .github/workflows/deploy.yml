@@ -1,0 +1,150 @@
+# =============================================================================
+# EXAMPLE / TEMPLATE — DISABLED ON PURPOSE
+# =============================================================================
+# This workflow is shipped fully commented out so it does NOT register a trigger
+# and never runs on this (upstream) repo.
+#
+# To enable it in YOUR private deployment repo, do ONE of:
+#   - uncomment everything below (strip the leading "# " from each line), or
+#   - copy the uncommented contents into a new .github/workflows/deploy.yml.
+#
+# Then complete the one-time setup in docs/CI-CD.md (OIDC role + repo variables +
+# stack config). Until then, leaving it commented keeps the Actions tab clean.
+# =============================================================================
+#
+# name: Deploy Whispa
+#
+# # Manual deploy for your dev / test environments.
+# #
+# # How to run: Actions tab -> "Deploy Whispa" -> "Run workflow" ->
+# #   - pick the environment (dev or test)
+# #   - enter the app version to deploy, e.g. 0.0.89 (see CHANGELOG.md / Releases)
+# #   - press "Run workflow"
+# #
+# # It stages stacks/<stack>.yaml into the Pulumi project, assumes an AWS role via
+# # OIDC (no static keys), and runs `pulumi up`. The version you enter is applied
+# # as whispa:imageTag for this run only.
+# #
+# # One-time setup before this works: see docs/CI-CD.md.
+#
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       stack:
+#         description: "Environment to deploy"
+#         required: true
+#         type: choice
+#         options:
+#           - dev
+#           - test
+#       version:
+#         description: "App version to deploy, e.g. 0.0.89 (just the version, NOT a full image path). Leave blank to use the version baked into this checkout."
+#         required: false
+#         type: string
+#
+# permissions:
+#   id-token: write   # required to request the OIDC token for AWS
+#   contents: read
+#
+# jobs:
+#   deploy:
+#     name: Deploy ${{ inputs.stack }}
+#     runs-on: ubuntu-latest
+#     env:
+#       AWS_REGION: ${{ vars.AWS_REGION }}
+#       DEPLOY_ROLE_ARN: ${{ vars.PULUMI_DEPLOY_ROLE_ARN }}
+#       PULUMI_BACKEND_URL: ${{ vars.PULUMI_BACKEND_URL }}
+#       STACK_NAME: ${{ inputs.stack }}
+#
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#
+#       - name: Resolve app version
+#         id: ver
+#         env:
+#           VERSION: ${{ inputs.version }}
+#         run: |
+#           set -euo pipefail
+#           if [ -z "${VERSION}" ]; then
+#             echo "No version entered — deploying the version baked into this checkout"
+#             echo "(infra/pulumi/Config/Version.cs). Run this workflow from a release tag"
+#             echo "for a strict infra+app lockstep deploy."
+#             echo "image_tag=" >> "$GITHUB_OUTPUT"
+#             exit 0
+#           fi
+#           # Strip a leading "v"; reject anything that isn't a bare version so we
+#           # never accidentally deploy a pasted full image path or a stray tag.
+#           TAG="${VERSION#v}"
+#           if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-._].+)?$ ]]; then
+#             echo "::error::version '$VERSION' is not a bare version like 0.0.89 — enter just the version, not a full image path"
+#             exit 1
+#           fi
+#           echo "Deploying app version $TAG (backend & frontend share it)"
+#           echo "image_tag=$TAG" >> "$GITHUB_OUTPUT"
+#
+#       - name: Verify required configuration is set
+#         run: |
+#           set -euo pipefail
+#           missing=0
+#           for v in AWS_REGION DEPLOY_ROLE_ARN PULUMI_BACKEND_URL; do
+#             if [ -z "${!v}" ]; then
+#               echo "::error::repository variable for $v is not set"
+#               missing=1
+#             fi
+#           done
+#           if [ "$missing" = "1" ]; then
+#             echo "Set these under Settings -> Secrets and variables -> Actions -> Variables."
+#             echo "See docs/CI-CD.md (One-time setup)."
+#             exit 1
+#           fi
+#
+#       - name: Verify stack config exists
+#         run: |
+#           set -euo pipefail
+#           if [ ! -f "stacks/${STACK_NAME}.yaml" ]; then
+#             echo "::error::stacks/${STACK_NAME}.yaml not found"
+#             echo "Create it once from the template and commit it to your (private) repo:"
+#             echo "  cp stacks/${STACK_NAME}.yaml.example stacks/${STACK_NAME}.yaml"
+#             echo "  # fill in your values; set secrets with 'pulumi config set --secret ...'"
+#             echo "See docs/CI-CD.md for the full walkthrough."
+#             exit 1
+#           fi
+#
+#       - name: Stage stack config for Pulumi
+#         # Stack files live in stacks/ (committed). The Pulumi project reads
+#         # infra/pulumi/Pulumi.<stack>.yaml (gitignored), so copy it into place.
+#         run: cp "stacks/${STACK_NAME}.yaml" "infra/pulumi/Pulumi.${STACK_NAME}.yaml"
+#
+#       - name: Configure AWS credentials (OIDC)
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
+#           aws-region: ${{ env.AWS_REGION }}
+#           # 8h session — a first-time stack provision can run 60+ minutes when ACM
+#           # certificate validation waits on DNS. The role's MaxSessionDuration must
+#           # allow at least this much (the setup script sets it to 28800).
+#           role-duration-seconds: 28800
+#
+#       - name: Setup .NET
+#         uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: "8.0"
+#
+#       - name: Pulumi up
+#         uses: pulumi/actions@v6
+#         env:
+#           PULUMI_BACKEND_URL: ${{ env.PULUMI_BACKEND_URL }}
+#           # Empty/unused when secrets are encrypted with AWS KMS (the deploy role
+#           # decrypts). Only needed if your stack uses a passphrase secrets provider.
+#           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+#         with:
+#           command: up
+#           stack-name: ${{ env.STACK_NAME }}
+#           work-dir: infra/pulumi
+#           # Only applied when a version was entered; otherwise the baked-in
+#           # default tag (Config/Version.cs) is used. Doubled braces are escaped
+#           # for format(); the result is JSON: { "whispa:imageTag": { "value": "X" } }.
+#           # Block scalar (|-) so YAML doesn't choke on the ':' inside the expression.
+#           config-map: |-
+#             ${{ steps.ver.outputs.image_tag && format('{{ "whispa:imageTag": {{ "value": "{0}" }} }}', steps.ver.outputs.image_tag) || '' }}

@@ -11,6 +11,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Example **manual deploy pipeline** (`.github/workflows/deploy.yml`): pick an
+  environment (`dev`/`test`), enter a version, press Run — stages the stack config
+  and runs `pulumi up` via AWS OIDC. Stack configs live in `stacks/`. Ships
+  commented-out (no trigger) so it doesn't run on the template repo; enable it in
+  your own repo.
+- `scripts/setup-github-oidc.sh` — one-time IAM/OIDC role setup for the pipeline.
+- `docs/CI-CD.md` — full guide to the deploy pipeline and how it ties to the
+  version tags.
+
+### Changed
+- `docs/UPGRADES.md` rewritten around the lockstep tag / `whispa:imageTag` model;
+  removed the stale GitHub Actions snippet (static AWS keys) in favour of the real
+  OIDC workflow, and corrected the version-compatibility section.
+- `docs/PREREQUISITES.md` — AWS Bedrock is the default keyless LLM (an
+  OpenRouter/OpenAI key is no longer required); added AssemblyAI to the STT list.
+- `README.md` — added the GitHub Actions deploy path and CI-CD docs link.
+
 ## [0.0.89] - 2026-06-24
 
 ## [0.0.88] - 2026-06-23

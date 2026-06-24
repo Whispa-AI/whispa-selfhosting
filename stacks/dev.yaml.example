@@ -1,0 +1,56 @@
+# =============================================================================
+# Whispa stack config — DEV environment (template)
+# =============================================================================
+#
+# Used by the "Deploy Whispa" GitHub Action (.github/workflows/deploy.yml), which
+# copies this file to infra/pulumi/Pulumi.dev.yaml at deploy time.
+#
+# Setup (do this once, in your PRIVATE deployment repo):
+#   1. cp stacks/dev.yaml.example stacks/dev.yaml
+#   2. Replace every CHANGE_ME below.
+#   3. Set secrets with the CLI so they are encrypted in-file, then copy the
+#      resulting `secure:` blocks into stacks/dev.yaml (or keep editing in
+#      infra/pulumi/Pulumi.dev.yaml and copy the file back to stacks/):
+#        cd infra/pulumi
+#        pulumi stack select dev
+#        pulumi config set --secret whispa:superuserPassword "..."
+#   4. Commit stacks/dev.yaml.  Encrypted `secure:` values are safe to commit;
+#      plaintext secrets are NOT — always use --secret.
+#
+# This is only the most common keys. See docs/CONFIGURATION.md for everything,
+# and infra/pulumi/Pulumi.dev.yaml.example for the fully-annotated template.
+# =============================================================================
+
+# Secrets provider. AWS KMS is recommended (the deploy role can decrypt with no
+# extra GitHub secret). Created when you run `pulumi stack init` with
+# --secrets-provider, or migrated later. Pulumi writes `encryptedkey:` here.
+# secretsprovider: awskms://alias/pulumi-secrets?region=ap-southeast-2
+
+config:
+  aws:region: ap-southeast-2
+
+  whispa:domainName: CHANGE_ME            # e.g. whispa-dev.yourcompany.com
+  whispa:frontendUrl: CHANGE_ME           # e.g. https://whispa-dev.yourcompany.com
+  whispa:apiDomainName: CHANGE_ME         # e.g. api.whispa-dev.yourcompany.com
+  whispa:mailFrom: CHANGE_ME              # a verified SES sender, e.g. no-reply@yourcompany.com
+
+  # SSL via Route53 auto-provisioning (recommended). Needs a hosted zone.
+  whispa:autoCertificate: "true"
+  whispa:hostedZoneId: CHANGE_ME          # e.g. Z0123456789ABCDEFGHIJ
+
+  # Speech-to-text. `amazon` (AWS Transcribe) needs no API key.
+  whispa:transcriptionProvider: amazon
+
+  # LLM: defaults to AWS Bedrock with Whispa's recommended models — nothing to set.
+
+  # Bootstrap admin (created on first deploy). Set the password via:
+  #   pulumi config set --secret whispa:superuserPassword "..."
+  whispa:superuserEmail: CHANGE_ME        # e.g. admin@yourcompany.com
+
+  # App version: leave UNSET here. The deploy workflow injects whispa:imageTag
+  # from the version you enter when you run it. Set it here only to pin a sticky
+  # default for this environment:
+  # whispa:imageTag: "0.0.89"
+
+  # Modest dev sizing.
+  whispa:desiredCount: "1"
