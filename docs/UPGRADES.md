@@ -9,11 +9,35 @@ Whispa releases follow [semantic versioning](https://semver.org/):
 - **Minor** (v1.2.0): New features, backwards compatible
 - **Patch** (v1.1.1): Bug fixes, backwards compatible
 
+## How versioning works here (lockstep)
+
+This infra repo and the Whispa app images move **in lockstep**:
+
+- Each release is a git tag `vX.Y.Z`. That release builds the matching app images
+  `ghcr.io/whispa-ai/whispa-backend:X.Y.Z` and `…/whispa-frontend:X.Y.Z`.
+- The version is baked into the infra at release time
+  (`infra/pulumi/Config/Version.cs` → `BuildInfo.DefaultImageTag`). So if you
+  **check out tag `vX.Y.Z` and deploy, you get app `X.Y.Z` with zero extra config.**
+- To deploy a *different* app version than the checkout's default, set
+  `whispa:imageTag` (a single key both services use).
+
+**Image resolution precedence** (highest first):
+
+1. `whispa:backendImage` / `whispa:frontendImage` — full image refs (advanced)
+2. `whispa:imageTag` — the simple "pin a version" knob
+3. the version baked into the infra release (`Config/Version.cs`)
+
+Available versions are listed in [CHANGELOG.md](../CHANGELOG.md) and on the
+[Releases page](https://github.com/Whispa-AI/whispa-selfhosting/releases). See
+[CONFIGURATION.md](CONFIGURATION.md#app-version-container-images) for the full key
+reference.
+
 ## Before Upgrading
 
 ### 1. Check Release Notes
 
-Always read the [release notes](https://github.com/Whispa-AI/whispa-selfhosting/releases) before upgrading:
+Always read the [release notes](https://github.com/Whispa-AI/whispa-selfhosting/releases)
+and [CHANGELOG.md](../CHANGELOG.md) before upgrading:
 - Breaking changes
 - New configuration options
 - Migration requirements
@@ -37,50 +61,47 @@ Schedule upgrades during low-traffic periods.
 
 ## Standard Upgrade Process
 
-### 1. Update Container Images
+### Option A: GitHub Actions (recommended)
 
-Edit your `Pulumi.<stack>.yaml`:
+If you've set up the [deploy pipeline](CI-CD.md), upgrading is a button:
 
-```yaml
-config:
-  whispa:backendImage: ghcr.io/whispa-ai/whispa-backend:v1.2.0
-  whispa:frontendImage: ghcr.io/whispa-ai/whispa-frontend:v1.2.0
-```
+1. **Actions → Deploy Whispa → Run workflow**
+2. Choose the environment (`dev` / `test`)
+3. Enter the new version, e.g. `0.0.89`
+4. **Run workflow**
 
-Or set via CLI:
-```bash
-pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:v1.2.0
-pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:v1.2.0
-```
+It runs `pulumi up` with `whispa:imageTag` set to the version you entered. See
+[CI-CD.md](CI-CD.md) for setup and details.
 
-### 2. Preview Changes
+### Option B: From your laptop
 
-```bash
-pulumi preview
-```
-
-Review the changes - typically only ECS task definitions will update.
-
-### 3. Apply Upgrade
+Two equivalent ways — move the whole checkout to a new release (keeps infra and app
+in lockstep), or just pin the app version:
 
 ```bash
+# B1 — move to a new release (recommended: infra + app together)
+git fetch --tags
+git checkout vX.Y.Z
+cd infra/pulumi
+pulumi up            # deploys app X.Y.Z by default
+
+# B2 — pin only the app version on your current infra
+cd infra/pulumi
+pulumi config set whispa:imageTag X.Y.Z
 pulumi up
 ```
 
-This will:
+`pulumi up` will:
 1. Create new ECS task definitions with the new images
 2. Deploy new tasks
 3. Drain old tasks (zero-downtime if multiple instances)
 4. Run database migrations automatically on startup
 
-### 4. Verify Upgrade
+### Verify Upgrade
 
 ```bash
 # Check service health
 curl https://api.yourcompany.com/health
-
-# Check version (if endpoint exists)
-curl https://api.yourcompany.com/version
 
 # Check ECS task status
 aws ecs describe-services \
@@ -91,22 +112,24 @@ aws ecs describe-services \
 
 ## Rollback Procedure
 
-If issues occur after upgrade:
-
 ### Quick Rollback
 
-```bash
-# Revert to previous version
-pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:v1.1.0
-pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:v1.1.0
+Re-deploy the previous good version — via the workflow (enter the older version) or
+locally:
 
-# Apply
+```bash
+# Pin the previous version and apply
+pulumi config set whispa:imageTag X.Y.(Z-1)
 pulumi up
 ```
 
+ECS rolls task definitions back to that image.
+
 ### Database Rollback
 
-If database migrations need to be reverted (rare):
+Migrations are applied on startup and are **forward-only** by design — rolling the
+app image back does not roll back a migration. Only revert a migration if a release
+note says it's safe:
 
 ```bash
 # Connect to backend container
@@ -118,10 +141,13 @@ aws ecs execute-command \
   --command "/bin/bash"
 
 # Run downgrade
-alembic downgrade -1  # Downgrade one version
+alembic downgrade -1            # one revision
 # or
-alembic downgrade <revision>  # Specific revision
+alembic downgrade <revision>    # a specific revision
 ```
+
+> If you may need to cross a migration boundary back and forth, restore from the
+> snapshot you took in [Before Upgrading](#2-backup-database) instead.
 
 ## Major Version Upgrades
 
@@ -130,10 +156,10 @@ Major versions may require additional steps.
 ### Pre-Upgrade Checklist
 
 1. Read all release notes between your current and target version
-2. Test upgrade in staging environment first
+2. Test the upgrade in your `dev`/`test` environment first
 3. Backup database
-4. Schedule extended maintenance window
-5. Have rollback plan ready
+4. Schedule an extended maintenance window
+5. Have a rollback plan ready
 
 ### Example: v1.x to v2.x
 
@@ -141,42 +167,31 @@ Major versions may require additional steps.
 # 1. Backup database
 pg_dump -h <rds-endpoint> -U whispa -d whispa > backup-v1.sql
 
-# 2. Update Pulumi configuration (check release notes for new options)
-pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:v2.0.0
-pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:v2.0.0
-pulumi config set whispa:newConfigOption value  # If required
+# 2. Move to the new release and add any new required config (from release notes)
+git fetch --tags && git checkout v2.0.0
+cd infra/pulumi
+pulumi config set whispa:newConfigOption value   # only if a release note requires it
 
 # 3. Preview and apply
 pulumi preview
 pulumi up
 
-# 4. Run any manual migration steps (from release notes)
-aws ecs execute-command \
-  --cluster whispa-prod \
-  --task <task-id> \
-  --container backend \
-  --interactive \
-  --command "python -m scripts.migrate_v2"
-
-# 5. Verify
+# 4. Verify
 curl https://api.yourcompany.com/health
 ```
 
 ## Infrastructure Upgrades
 
-Sometimes infrastructure changes are needed:
-
-### Pulumi Code Updates
+Most releases are app-only (just a new image), but some also change infrastructure
+(new IAM permissions, networking, alarms, etc.). Because infra is **versioned with
+the same tags**, you pick those changes up by checking out a newer tag:
 
 ```bash
-# Pull latest infrastructure code
-git pull origin main
-
-# Preview changes
-pulumi preview
-
-# Apply (may cause downtime for significant changes)
-pulumi up
+git fetch --tags
+git checkout vX.Y.Z
+cd infra/pulumi
+pulumi preview        # review infra changes
+pulumi up             # apply (may cause downtime for significant changes)
 ```
 
 ### RDS Upgrades
@@ -193,56 +208,13 @@ pulumi up
 
 **Note**: RDS engine upgrades cause 10-30 minutes of downtime.
 
-## Automated Upgrades
-
-For organizations wanting automated upgrades:
-
-### Using GitHub Actions
-
-Create `.github/workflows/upgrade.yml`:
-
-```yaml
-name: Upgrade Whispa
-
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to deploy'
-        required: true
-
-jobs:
-  upgrade:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pulumi
-        uses: pulumi/actions@v4
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Upgrade
-        run: |
-          cd infra/pulumi
-          pulumi config set whispa:backendImage ghcr.io/whispa-ai/whispa-backend:${{ inputs.version }}
-          pulumi config set whispa:frontendImage ghcr.io/whispa-ai/whispa-frontend:${{ inputs.version }}
-          pulumi up --yes
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-```
-
 ## Version Compatibility
 
-| Self-Hosting Repo | Whispa Images | Notes |
-|-------------------|---------------|-------|
-| v1.0.x | v1.0.0 - v1.x.x | Initial release |
-| v1.1.x | v1.0.0 - v1.x.x | Added HA options |
+Infra and app images are released together and are designed to be deployed at the
+**same version** — that's the default when you check out a release tag. The
+`whispa:imageTag` override exists for short-lived skew (e.g. hotfixing the app
+version on stable infra), not as a long-term mixed-version mode. When in doubt,
+match the app version to the infra tag you checked out.
 
 ## Getting Help
 

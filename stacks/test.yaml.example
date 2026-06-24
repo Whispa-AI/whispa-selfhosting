@@ -1,0 +1,33 @@
+# =============================================================================
+# Whispa stack config — TEST environment (template)
+# =============================================================================
+#
+# Same idea as dev.yaml.example, for a separate "test" environment. Copy to
+# stacks/test.yaml, fill in the values, and commit it to your private repo.
+# The "Deploy Whispa" workflow stages it to infra/pulumi/Pulumi.test.yaml.
+#
+# See docs/CONFIGURATION.md for all options.
+# =============================================================================
+
+# secretsprovider: awskms://alias/pulumi-secrets?region=ap-southeast-2
+
+config:
+  aws:region: ap-southeast-2
+
+  whispa:domainName: CHANGE_ME            # e.g. whispa-test.yourcompany.com
+  whispa:frontendUrl: CHANGE_ME           # e.g. https://whispa-test.yourcompany.com
+  whispa:apiDomainName: CHANGE_ME         # e.g. api.whispa-test.yourcompany.com
+  whispa:mailFrom: CHANGE_ME              # a verified SES sender
+
+  whispa:autoCertificate: "true"
+  whispa:hostedZoneId: CHANGE_ME
+
+  whispa:transcriptionProvider: amazon
+
+  whispa:superuserEmail: CHANGE_ME
+  # pulumi config set --secret whispa:superuserPassword "..."
+
+  # Version is supplied at deploy time via the workflow's "version" input.
+  # whispa:imageTag: "0.0.89"
+
+  whispa:desiredCount: "1"

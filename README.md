@@ -37,7 +37,7 @@ See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
    ```bash
    git clone https://github.com/Whispa-AI/whispa-selfhosting.git
    cd whispa-selfhosting
-   git checkout v0.0.73   # the latest release tag — deploys the matching app images by default
+   git checkout vX.Y.Z   # a release tag (see Releases / CHANGELOG.md) — deploys the matching app images by default
    ```
 
 2. **Configure your stack**
@@ -60,6 +60,15 @@ See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete deployment guide.
 
+### Deploy via GitHub Actions (recommended for ongoing rollouts)
+
+Do the first deploy locally (it provisions DNS/certs/DB), then use the included
+**manual deploy pipeline** for version rollouts: pick an environment, type the
+version, press **Run workflow**. It runs `pulumi up` via AWS OIDC — no static keys.
+
+- Workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+- Setup + usage: [docs/CI-CD.md](docs/CI-CD.md)
+
 ## Documentation
 
 | Document | Description |
@@ -68,6 +77,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete deployment guide.
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Step-by-step deployment instructions |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | All configuration options explained |
 | [UPGRADES.md](docs/UPGRADES.md) | How to upgrade to new versions |
+| [CI-CD.md](docs/CI-CD.md) | Deploy from GitHub Actions (the manual "press deploy" pipeline) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and solutions |
 | [SECURITY.md](docs/SECURITY.md) | Security best practices |
 

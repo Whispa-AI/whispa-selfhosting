@@ -167,15 +167,21 @@ Depending on your configuration, you may need:
 
 | Service | Purpose | Required? |
 |---------|---------|-----------|
-| OpenRouter / OpenAI | LLM for call analysis | Yes |
+| **LLM** (choose one): | | |
+| ↳ AWS Bedrock | Uses IAM role, no API key needed | **Default — recommended** |
+| ↳ OpenRouter / OpenAI | External LLM provider | Alternative (requires API key) |
 | **Speech-to-text** (choose one): | | |
 | ↳ AWS Transcribe | Uses IAM role, no API key needed | Recommended for AWS |
 | ↳ Deepgram | External STT provider | Alternative |
+| ↳ AssemblyAI | External STT provider | Alternative |
 | ↳ ElevenLabs | External STT provider | Alternative |
 | Sentry | Error tracking | No |
 | Langfuse | LLM observability | No |
 
-**Note:** AWS Transcribe is recommended for self-hosting on AWS since it uses your ECS task role for authentication — no external API keys to manage.
+**Note:** On AWS, the recommended LLM (Bedrock) and STT (Transcribe) both
+authenticate via your ECS task IAM role — **no external API keys to manage**.
+Bedrock needs no model configuration either; the backend ships Whispa's
+recommended models per analyzer. See [CONFIGURATION.md](CONFIGURATION.md#llm-configuration).
 
 ## Checklist
 
@@ -186,8 +192,8 @@ Before proceeding to deployment, confirm:
 - [ ] AWS CLI installed and configured
 - [ ] AWS account with sufficient permissions
 - [ ] Domain name available
-- [ ] OpenRouter/OpenAI API key obtained
-- [ ] Speech-to-text ready: AWS Transcribe (no key needed) OR Deepgram/ElevenLabs API key
+- [ ] LLM ready: AWS Bedrock (no key needed, default) OR an OpenRouter/OpenAI API key
+- [ ] Speech-to-text ready: AWS Transcribe (no key needed) OR Deepgram/AssemblyAI/ElevenLabs API key
 
 ## Next Steps
 
