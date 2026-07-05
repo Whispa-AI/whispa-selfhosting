@@ -303,6 +303,7 @@ public class ComputeStack : ComponentResource
                         new { name = "MAIL_FROM", value = config.MailFrom },
                         new { name = "MAIL_FROM_NAME", value = config.MailFromName },
                         new { name = "FEEDBACK_EMAIL", value = config.FeedbackEmail },
+                        new { name = "CLIENT_NAME", value = config.ClientName },
 
                         // URLs
                         new { name = "FRONTEND_URL", value = config.FrontendUrl },

@@ -127,6 +127,9 @@ public class WhispaConfig
     /// <summary>Feedback/support email address</summary>
     public string FeedbackEmail => _config.Get("feedbackEmail") ?? MailFrom;
 
+    /// <summary>Client/deployment name stamped into feedback email subjects (default: Whispa)</summary>
+    public string ClientName => _config.Get("clientName") ?? "Whispa";
+
     // ===================
     // Bootstrap Admin
     // ===================

@@ -104,6 +104,7 @@ config:
 
   # whispa:mailFromName: Whispa              # Sender display name (default: Whispa)
   # whispa:feedbackEmail: support@yourcompany.com  # Feedback email (default: same as mailFrom)
+  # whispa:clientName: YourCompany           # Deployment name stamped into feedback email subjects (default: Whispa)
 
   # ===================
   # Optional - Database Sizing
