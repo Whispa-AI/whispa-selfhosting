@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.120] - 2026-07-15
+
 ## [0.0.119] - 2026-07-15
 
 ## [0.0.118] - 2026-07-14
