@@ -203,6 +203,30 @@ curl -X POST 'https://api.deepgram.com/v1/listen' \
 - Verify API key in Secrets Manager
 - Check usage limits
 
+### Call Recording Won't Play (Download Works)
+
+**Symptom**: The in-app audio player fails with
+`NotSupportedError: The element has no supported sources`, but the Download
+button still produces a valid WAV.
+
+**Cause**: The audio bucket has no CORS configuration. The player's `<audio>`
+element uses `crossorigin="anonymous"`, so the browser requires CORS headers
+on the presigned-URL response and silently discards it without them. Download
+still works because it falls back to a top-level navigation, which doesn't
+need CORS.
+
+**Check**:
+```bash
+aws s3api get-bucket-cors --bucket <your-audio-bucket>
+# NoSuchCORSConfiguration → this is your problem
+```
+
+**Fix**: Add a CORS rule allowing `GET` from the app origin — see
+[CONFIGURATION.md → Storage (S3) → Bring-your-own bucket](CONFIGURATION.md#bring-your-own-bucket).
+Pulumi-managed stacks configure this automatically from `whispa:frontendUrl`;
+if playback fails there, verify `frontendUrl` matches the origin the app is
+actually served from.
+
 ### Slow Performance
 
 **Symptoms**: High latency, timeouts
