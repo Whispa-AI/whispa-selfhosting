@@ -68,7 +68,10 @@ public class ComputeStack : ComponentResource
             LoadBalancerType = "application",
             SecurityGroups = new[] { albSecurityGroupId },
             Subnets = publicSubnetIds,
-            EnableDeletionProtection = config.Environment == "prod",
+            // EndsWith, not equality: production environments are named like
+            // "cc-prod", so the old == "prod" comparison never matched and
+            // every prod ALB ran unprotected.
+            EnableDeletionProtection = config.Environment.EndsWith("prod"),
             Tags = new InputMap<string>
             {
                 ["Name"] = config.ResourceName("alb"),
@@ -286,6 +289,11 @@ public class ComputeStack : ComponentResource
                     name = "backend",
                     image = config.BackendImage,
                     essential = true,
+                    // SIGTERM -> SIGKILL window (Fargate default is 30s, max 120s).
+                    // Normally the drain machinery empties the task BEFORE ECS stops
+                    // it, so this is headroom for call finalization on non-drain
+                    // stops (whispa docs/zero-downtime-deploys.md).
+                    stopTimeout = 120,
                     portMappings = new[]
                     {
                         new { containerPort = 8000, protocol = "tcp" },
@@ -496,6 +504,10 @@ public class ComputeStack : ComponentResource
             Cluster = cluster.Arn,
             TaskDefinition = backendTaskDef.Arn,
             DesiredCount = config.DesiredCount,
+            // Observed time-to-healthy is ~95s (migrations + seeds + warmups)
+            // against a 60s container-health startPeriod; without this grace a
+            // slow boot (long migration) has the circuit breaker kill a good deploy.
+            HealthCheckGracePeriodSeconds = 180,
             LaunchType = "FARGATE",
             NetworkConfiguration = new ServiceNetworkConfigurationArgs
             {
