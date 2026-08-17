@@ -243,6 +243,32 @@ public class IamStack : ComponentResource
             Policy = ecsExecPolicy,
         }, new CustomResourceOptions { Parent = this });
 
+        // Task scale-in protection: the backend marks itself protected while it
+        // holds live voice calls, so a rolling deploy waits for the drain to
+        // finish instead of cutting calls off (whispa docs/zero-downtime-deploys.md).
+        // The task-local agent endpoint acts as the task itself; this grant is the
+        // only prerequisite. Scoped to this stack's cluster tasks.
+        var taskProtectionPolicy = JsonSerializer.Serialize(new
+        {
+            Version = "2012-10-17",
+            Statement = new[]
+            {
+                new
+                {
+                    Sid = "TaskScaleInProtection",
+                    Effect = "Allow",
+                    Action = new[] { "ecs:UpdateTaskProtection" },
+                    Resource = $"arn:aws:ecs:*:*:task/{config.ResourceName("cluster")}/*",
+                },
+            },
+        });
+
+        new RolePolicy($"{name}-task-protection", new RolePolicyArgs
+        {
+            Role = taskRole.Name,
+            Policy = taskProtectionPolicy,
+        }, new CustomResourceOptions { Parent = this });
+
         // AWS Bedrock policy (for bedrock/* LLM models and cross-region inference profiles).
         // Gated on the provider, not on bedrockRegion (which now always has a value):
         // the default provider is Bedrock, so a zero-config deployment gets these grants.
