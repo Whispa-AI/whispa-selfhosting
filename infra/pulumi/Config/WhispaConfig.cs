@@ -415,6 +415,112 @@ public class WhispaConfig
     public bool DeployEventBridgeConsumer => _config.GetBoolean("deployEventBridgeConsumer") ?? EnableAwsConnect;
 
     // ===================
+    // Inbound UDP media (real-time call audio)
+    // ===================
+
+    /// <summary>
+    /// Deploy the inbound UDP media path (default: false).
+    /// Adds a Network Load Balancer with UDP listeners in front of the backend
+    /// service, for providers that stream live call audio as RTP. Off unless a
+    /// deployment explicitly needs it — an ALB cannot carry UDP at all.
+    /// </summary>
+    public bool MediaIngressEnabled => _config.GetBoolean("mediaIngressEnabled") ?? false;
+
+    /// <summary>
+    /// UDP ports forwarded to the backend task (default: 42010, 42011).
+    /// Only pre-registered ports are forwarded, so the application shares this
+    /// fixed set across all concurrent calls; two ports carry any number of
+    /// calls. Each port costs a listener and a target group.
+    /// </summary>
+    public int[] MediaIngressPorts =>
+        _config.GetObject<int[]>("mediaIngressPorts") ?? [42010, 42011];
+
+    /// <summary>
+    /// Source CIDRs allowed to send media, e.g. ["203.0.113.0/24"].
+    /// Empty means the port is open to the internet, so set this to the
+    /// provider's media ranges wherever they are known.
+    /// </summary>
+    public string[] MediaIngressAllowedCidrs =>
+        _config.GetObject<string[]>("mediaIngressAllowedCidrs") ?? [];
+
+    /// <summary>
+    /// Maximum media ports. ECS permits at most five target groups per service
+    /// and one is already used by the ALB, so more than four would fail at
+    /// deploy time rather than at configuration time.
+    /// </summary>
+    public const int MaxMediaIngressPorts = 4;
+
+    /// <summary>
+    /// Reject a media configuration that would deploy but not work, or that
+    /// would silently expose the ports to the internet.
+    /// </summary>
+    public void ValidateMediaIngress()
+    {
+        if (!MediaIngressEnabled)
+        {
+            return;
+        }
+
+        var ports = MediaIngressPorts;
+        if (ports.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressEnabled requires mediaIngressPorts; an empty list would "
+                + "create a paid load balancer that forwards nothing.");
+        }
+
+        if (ports.Length > MaxMediaIngressPorts)
+        {
+            throw new InvalidOperationException(
+                $"mediaIngressPorts allows at most {MaxMediaIngressPorts} ports "
+                + "(ECS permits five target groups per service and the load balancer "
+                + $"already uses one); got {ports.Length}.");
+        }
+
+        if (ports.Distinct().Count() != ports.Length)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressPorts must be distinct; duplicates would collide as "
+                + "resource names and listeners.");
+        }
+
+        foreach (var port in ports)
+        {
+            if (port is < 1 or > 65535)
+            {
+                throw new InvalidOperationException(
+                    $"mediaIngressPorts contains an invalid port: {port}.");
+            }
+        }
+
+        // Fail closed. An empty list previously meant 0.0.0.0/0, which exposed an
+        // unauthenticated UDP parser to the internet from a single boolean — too
+        // easy to do by accident for a product other people self-host. Operators
+        // who genuinely want that must now say so explicitly.
+        var cidrs = MediaIngressAllowedCidrs;
+        if (cidrs.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressEnabled requires mediaIngressAllowedCidrs. Set your "
+                + "provider's media ranges, or \"0.0.0.0/0\" to deliberately accept "
+                + "media from anywhere.");
+        }
+
+        foreach (var cidr in cidrs)
+        {
+            var parts = cidr.Split('/');
+            if (parts.Length != 2
+                || !System.Net.IPAddress.TryParse(parts[0], out _)
+                || !int.TryParse(parts[1], out var prefix)
+                || prefix is < 0 or > 32)
+            {
+                throw new InvalidOperationException(
+                    $"mediaIngressAllowedCidrs contains an invalid CIDR: {cidr}");
+            }
+        }
+    }
+
+    // ===================
     // Resource Naming
     // ===================
 

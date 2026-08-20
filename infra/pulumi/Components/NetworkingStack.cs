@@ -22,6 +22,9 @@ namespace Whispa.Aws.Pulumi.Components;
 /// </summary>
 public class NetworkingStack : ComponentResource
 {
+    /// <summary>Public (and private) subnets created, one per availability zone.</summary>
+    public const int PublicSubnetCount = 2;
+
     /// <summary>VPC ID</summary>
     public Output<string> VpcId { get; }
 
@@ -39,6 +42,14 @@ public class NetworkingStack : ComponentResource
 
     /// <summary>Security group for RDS</summary>
     public Output<string> RdsSecurityGroupId { get; }
+
+    /// <summary>
+    /// Security group for the inbound-media load balancer, or null when media
+    /// ingress is disabled. Lives here because this stack owns every security
+    /// group — and because the task security group must reference it for health
+    /// checks, which would otherwise be a circular dependency.
+    /// </summary>
+    public Output<string>? MediaLoadBalancerSecurityGroupId { get; }
 
     public NetworkingStack(string name, WhispaConfig config, ComponentResourceOptions? options = null)
         : base("whispa:networking:NetworkingStack", name, options)
@@ -133,7 +144,7 @@ public class NetworkingStack : ComponentResource
 
         var cidrBase = $"{vpcCidrParts[0]}.{vpcCidrParts[1]}";
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < PublicSubnetCount; i++)
         {
             var az = i == 0 ? az1 : az2;
 
@@ -299,30 +310,106 @@ public class NetworkingStack : ComponentResource
 
         AlbSecurityGroupId = albSg.Id;
 
+        // Media load balancer security group (only when media ingress is on).
+        // Filtering at the edge means rejected traffic never reaches the task.
+        SecurityGroup? mediaLbSg = null;
+        if (config.MediaIngressEnabled)
+        {
+            mediaLbSg = new SecurityGroup($"{name}-media-lb-sg", new SecurityGroupArgs
+            {
+                VpcId = vpc.Id,
+                Description = "Security group for the inbound-media load balancer",
+                Ingress = config.MediaIngressPorts.Select(port => new SecurityGroupIngressArgs
+                {
+                    Protocol = "udp",
+                    FromPort = port,
+                    ToPort = port,
+                    CidrBlocks = config.MediaIngressAllowedCidrs,
+                    Description = $"Media from provider (UDP {port})",
+                }).ToList(),
+                Egress = new[]
+                {
+                    new SecurityGroupEgressArgs
+                    {
+                        Protocol = "-1",
+                        FromPort = 0,
+                        ToPort = 0,
+                        CidrBlocks = new[] { "0.0.0.0/0" },
+                        Description = "Forward to targets and run health checks",
+                    },
+                },
+                Tags = new InputMap<string>
+                {
+                    ["Name"] = config.ResourceName("media-lb-sg"),
+                },
+            }, new CustomResourceOptions { Parent = this });
+
+            MediaLoadBalancerSecurityGroupId = mediaLbSg.Id;
+        }
+
         // ECS Security Group - allows traffic from ALB
+        var ecsIngress = new List<SecurityGroupIngressArgs>
+        {
+            new()
+            {
+                Protocol = "tcp",
+                FromPort = 8000,
+                ToPort = 8000,
+                SecurityGroups = new[] { albSg.Id },
+                Description = "Backend from ALB",
+            },
+            new()
+            {
+                Protocol = "tcp",
+                FromPort = 3000,
+                ToPort = 3000,
+                SecurityGroups = new[] { albSg.Id },
+                Description = "Frontend from ALB",
+            },
+        };
+
+        if (config.MediaIngressEnabled)
+        {
+            // Two distinct paths, and they need different rules.
+            //
+            // Media (UDP) arrives with the PROVIDER's source address, because a
+            // UDP target group has client-IP preservation permanently enabled —
+            // so it cannot be admitted by referencing the load balancer's
+            // security group and must name the provider's ranges. The load
+            // balancer filters the same ranges at the edge as well.
+            //
+            // Health checks (TCP) come from the load balancer itself, not from a
+            // client, so they are admitted by referencing its security group.
+            // Missing this rule leaves every target unhealthy; since a Network
+            // Load Balancer fails open when no target is healthy, media keeps
+            // flowing and the breakage is invisible.
+            foreach (var port in config.MediaIngressPorts)
+            {
+                ecsIngress.Add(new SecurityGroupIngressArgs
+                {
+                    Protocol = "udp",
+                    FromPort = port,
+                    ToPort = port,
+                    CidrBlocks = config.MediaIngressAllowedCidrs,
+                    Description = $"Inbound media (UDP {port})",
+                });
+            }
+
+            ecsIngress.Add(new SecurityGroupIngressArgs
+            {
+                Protocol = "tcp",
+                FromPort = 8000,
+                ToPort = 8000,
+                SecurityGroups = new[] { mediaLbSg!.Id },
+                Description = "Media load balancer health checks",
+            });
+        }
+
         var ecsSg = new SecurityGroup($"{name}-ecs-sg", new SecurityGroupArgs
         {
             VpcId = vpc.Id,
             Description = "Security group for ECS tasks",
-            Ingress = new[]
-            {
-                new SecurityGroupIngressArgs
-                {
-                    Protocol = "tcp",
-                    FromPort = 8000,
-                    ToPort = 8000,
-                    SecurityGroups = new[] { albSg.Id },
-                    Description = "Backend from ALB",
-                },
-                new SecurityGroupIngressArgs
-                {
-                    Protocol = "tcp",
-                    FromPort = 3000,
-                    ToPort = 3000,
-                    SecurityGroups = new[] { albSg.Id },
-                    Description = "Frontend from ALB",
-                },
-            },
+            Ingress = ecsIngress,
             Egress = new[]
             {
                 new SecurityGroupEgressArgs
