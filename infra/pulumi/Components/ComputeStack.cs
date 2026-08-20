@@ -52,10 +52,18 @@ public class ComputeStack : ComponentResource
         Output<string> appSecretsArn,
         Output<string> apiKeysSecretArn,
         Output<string> superuserPasswordSecretArn,
+        // Inbound UDP media path (optional; see MediaIngressStack).
+        Output<string>? mediaAdvertiseAddress = null,
+        int[]? mediaPorts = null,
+        Output<ImmutableArray<string>>? mediaTargetGroupArns = null,
         ComponentResourceOptions? options = null)
         : base("whispa:compute:ComputeStack", name, options)
     {
         var region = config.AwsRegion;
+        // Media ingress is opt-in; absent it, the address resolves empty and the
+        // backend falls back to its non-media audio source.
+        var mediaAddress = mediaAdvertiseAddress ?? Output.Create(string.Empty);
+        var mediaUdpPorts = mediaPorts ?? [];
 
         // ===================
         // Application Load Balancer
@@ -272,6 +280,7 @@ public class ComputeStack : ComponentResource
             apiKeysSecretArn,
             superuserPasswordSecretArn
         ).Apply(values => config.ExtraSecrets.Apply(extraSecrets =>
+            mediaAddress.Apply(mediaAdvertise =>
         {
             var dbHost = values.Item1;
             var dbPortValue = values.Item2;
@@ -297,7 +306,11 @@ public class ComputeStack : ComponentResource
                     portMappings = new[]
                     {
                         new { containerPort = 8000, protocol = "tcp" },
-                    },
+                    }.Concat(
+                        // ECS registers a target by container port, so each
+                        // forwarded media port must be declared here too.
+                        mediaUdpPorts.Select(p => new { containerPort = p, protocol = "udp" })
+                    ).ToArray(),
                     environment = new[]
                     {
                         // Database
@@ -384,7 +397,23 @@ public class ComputeStack : ComponentResource
                         // scenario-seeded stt_keyterms.
                         new { name = "STT_DYNAMIC_KEYTERMS_ENABLED", value = config.SttDynamicKeyterms.ToString().ToLower() },
                         new { name = "STT_KEYTERM_DOMAIN_DEFAULTS", value = config.SttKeytermDomainDefaults.ToString().ToLower() },
-                    }.Concat(config.ExtraEnv.Select(kv => new { name = kv.Key, value = kv.Value })).ToArray(),
+                    }
+                    // The address TCN sends RTP to. It must be the load
+                    // balancer's static address, not the task's own: the task
+                    // only ever sees a private interface address, and the
+                    // provider sends media strictly to what we advertise.
+                    .Concat(mediaUdpPorts.Length > 0 && !string.IsNullOrEmpty(mediaAdvertise)
+                        ? new[]
+                        {
+                            new { name = "TCN_MEDIA_ADVERTISE_ADDRESS", value = mediaAdvertise },
+                            new
+                            {
+                                name = "TCN_MEDIA_RTP_PORTS",
+                                value = string.Join(",", mediaUdpPorts),
+                            },
+                        }
+                        : [])
+                    .Concat(config.ExtraEnv.Select(kv => new { name = kv.Key, value = kv.Value })).ToArray(),
                     secrets = BuildSecretsList(
                         appSecretArn,
                         apiSecretArn,
@@ -418,7 +447,7 @@ public class ComputeStack : ComponentResource
                     },
                 },
             });
-        }));
+        })));
 
         var backendTaskDef = new TaskDefinition($"{name}-backend-task", new TaskDefinitionArgs
         {
@@ -515,15 +544,40 @@ public class ComputeStack : ComponentResource
                 SecurityGroups = new[] { ecsSecurityGroupId },
                 AssignPublicIp = false,
             },
-            LoadBalancers = new[]
-            {
-                new ServiceLoadBalancerArgs
+            // One entry per target group: the ALB's HTTP group plus, when
+            // media ingress is on, the UDP group behind each forwarded port.
+            LoadBalancers = mediaTargetGroupArns is null
+                ? new InputList<ServiceLoadBalancerArgs>
                 {
-                    TargetGroupArn = backendTg.Arn,
-                    ContainerName = "backend",
-                    ContainerPort = 8000,
-                },
-            },
+                    new ServiceLoadBalancerArgs
+                    {
+                        TargetGroupArn = backendTg.Arn,
+                        ContainerName = "backend",
+                        ContainerPort = 8000,
+                    },
+                }
+                : mediaTargetGroupArns.Apply(arns =>
+                {
+                    var balancers = new List<ServiceLoadBalancerArgs>
+                    {
+                        new()
+                        {
+                            TargetGroupArn = backendTg.Arn,
+                            ContainerName = "backend",
+                            ContainerPort = 8000,
+                        },
+                    };
+                    for (var i = 0; i < arns.Length && i < mediaUdpPorts.Length; i++)
+                    {
+                        balancers.Add(new ServiceLoadBalancerArgs
+                        {
+                            TargetGroupArn = arns[i],
+                            ContainerName = "backend",
+                            ContainerPort = mediaUdpPorts[i],
+                        });
+                    }
+                    return balancers;
+                }),
             DeploymentCircuitBreaker = new ServiceDeploymentCircuitBreakerArgs
             {
                 Enable = true,

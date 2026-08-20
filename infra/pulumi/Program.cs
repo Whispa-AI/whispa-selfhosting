@@ -66,6 +66,18 @@ return await Deployment.RunAsync(() =>
     // Phase 4: Compute
     // ===================
 
+    // Inbound UDP media path (optional): a Network Load Balancer with UDP
+    // listeners in front of the same backend service, for providers that stream
+    // live call audio as RTP. An ALB cannot carry UDP at all.
+    MediaIngressStack? mediaIngress = null;
+    if (config.MediaIngressEnabled)
+    {
+        mediaIngress = new MediaIngressStack("media-ingress", config,
+            vpcId: networking.VpcId,
+            publicSubnetIds: networking.PublicSubnetIds,
+            healthCheckPort: 8000);
+    }
+
     var certificateArn = config.AutoCertificate
         ? new CertificateStack("certificate", config, config.HostedZoneId!).CertificateArn
         : Output.Create(config.CertificateArn!);
@@ -88,7 +100,10 @@ return await Deployment.RunAsync(() =>
         dbPasswordSecretArn: secrets.DbPasswordSecretArn,
         appSecretsArn: secrets.AppSecretsArn,
         apiKeysSecretArn: secrets.ApiKeysSecretArn,
-        superuserPasswordSecretArn: secrets.SuperuserPasswordSecretArn);
+        superuserPasswordSecretArn: secrets.SuperuserPasswordSecretArn,
+        mediaAdvertiseAddress: mediaIngress?.AdvertiseAddress,
+        mediaPorts: mediaIngress?.Ports,
+        mediaTargetGroupArns: mediaIngress?.TargetGroupArns);
 
     // ===================
     // Phase 5: DNS (Optional)
@@ -145,6 +160,11 @@ return await Deployment.RunAsync(() =>
 
         // ALB
         ["albDnsName"] = compute.AlbDnsName,
+
+        // Inbound media (if deployed). The advertise address is what the
+        // telephony provider must send RTP to, and what it would allowlist.
+        ["mediaAdvertiseAddress"] = mediaIngress?.AdvertiseAddress,
+        ["mediaDnsName"] = mediaIngress?.DnsName,
 
         // Application URLs
         ["frontendUrl"] = dns.DomainUrl,

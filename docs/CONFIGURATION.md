@@ -272,6 +272,50 @@ aws ecs update-service --cluster whispa-prod --service whispa-prod-backend --for
 
 See `infrastructure/aws-connect-lambda/README.md` for Contact Flow setup instructions.
 
+### Inbound UDP Media (Real-Time Call Audio)
+
+Some telephony providers deliver live call audio as an RTP media stream rather
+than over HTTP. That traffic cannot arrive through the Application Load
+Balancer — an ALB is HTTP-only and cannot forward UDP — so enabling this adds a
+Network Load Balancer with UDP listeners in front of the same backend service.
+
+Disabled by default. Enable only if your provider requires it:
+
+```bash
+pulumi config set whispa:mediaIngressEnabled true
+pulumi config set --path whispa:mediaIngressAllowedCidrs[0] "203.0.113.0/24"
+pulumi up
+```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:mediaIngressEnabled` | `false` | Deploy the inbound UDP media path (NLB + listeners + target groups) |
+| `whispa:mediaIngressPorts` | `[42010, 42011]` | UDP ports forwarded to the backend task. One listener and target group per port |
+| `whispa:mediaIngressAllowedCidrs` | `[]` (open) | Source ranges allowed to send media. **Leave unset and the ports are open to the internet** — set your provider's media ranges |
+
+After `pulumi up`, the `mediaAdvertiseAddress` stack output holds the static
+address the provider must send media to:
+
+```bash
+pulumi stack output mediaAdvertiseAddress
+```
+
+That address is an Elastic IP, so it survives deploys and can be allowlisted by
+the provider. The backend receives it automatically — it is passed to the
+container as `TCN_MEDIA_ADVERTISE_ADDRESS`, along with `TCN_MEDIA_RTP_PORTS`.
+
+**Notes**
+
+- The address is deliberately an IP rather than the load balancer's DNS name:
+  it is published inside SDP, which carries an IP literal, and providers
+  commonly allowlist it.
+- A few ports serve any number of concurrent calls. The application shares them
+  and distinguishes calls by source address, so this does not need to scale with
+  agent count.
+- Health checks run over HTTP against `/health` on port 8000: a UDP target group
+  cannot health-check over UDP, and an unhealthy target receives no traffic.
+- Replacing a task (any deploy) interrupts media for calls in flight.
+
 ## Environment Variables
 
 These environment variables are automatically set from Pulumi configuration in the ECS task definitions. You should not need to set these manually.

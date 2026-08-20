@@ -300,29 +300,55 @@ public class NetworkingStack : ComponentResource
         AlbSecurityGroupId = albSg.Id;
 
         // ECS Security Group - allows traffic from ALB
+        var ecsIngress = new List<SecurityGroupIngressArgs>
+        {
+            new()
+            {
+                Protocol = "tcp",
+                FromPort = 8000,
+                ToPort = 8000,
+                SecurityGroups = new[] { albSg.Id },
+                Description = "Backend from ALB",
+            },
+            new()
+            {
+                Protocol = "tcp",
+                FromPort = 3000,
+                ToPort = 3000,
+                SecurityGroups = new[] { albSg.Id },
+                Description = "Frontend from ALB",
+            },
+        };
+
+        if (config.MediaIngressEnabled)
+        {
+            // A UDP Network Load Balancer preserves the client's source
+            // address, so the task sees the PROVIDER's address rather than the
+            // load balancer's — these rules must therefore allow the provider's
+            // ranges, not a security group. Leaving the CIDR list empty opens
+            // the ports to the internet, which is why it is called out here.
+            var mediaSources = config.MediaIngressAllowedCidrs.Length > 0
+                ? config.MediaIngressAllowedCidrs
+                : new[] { "0.0.0.0/0" };
+
+            foreach (var port in config.MediaIngressPorts)
+            {
+                ecsIngress.Add(new SecurityGroupIngressArgs
+                {
+                    Protocol = "udp",
+                    FromPort = port,
+                    ToPort = port,
+                    CidrBlocks = mediaSources,
+                    Description = $"Inbound media (UDP {port})",
+                });
+            }
+        }
+
         var ecsSg = new SecurityGroup($"{name}-ecs-sg", new SecurityGroupArgs
         {
             VpcId = vpc.Id,
             Description = "Security group for ECS tasks",
-            Ingress = new[]
-            {
-                new SecurityGroupIngressArgs
-                {
-                    Protocol = "tcp",
-                    FromPort = 8000,
-                    ToPort = 8000,
-                    SecurityGroups = new[] { albSg.Id },
-                    Description = "Backend from ALB",
-                },
-                new SecurityGroupIngressArgs
-                {
-                    Protocol = "tcp",
-                    FromPort = 3000,
-                    ToPort = 3000,
-                    SecurityGroups = new[] { albSg.Id },
-                    Description = "Frontend from ALB",
-                },
-            },
+            Ingress = ecsIngress,
             Egress = new[]
             {
                 new SecurityGroupEgressArgs
