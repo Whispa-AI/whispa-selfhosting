@@ -443,6 +443,83 @@ public class WhispaConfig
     public string[] MediaIngressAllowedCidrs =>
         _config.GetObject<string[]>("mediaIngressAllowedCidrs") ?? [];
 
+    /// <summary>
+    /// Maximum media ports. ECS permits at most five target groups per service
+    /// and one is already used by the ALB, so more than four would fail at
+    /// deploy time rather than at configuration time.
+    /// </summary>
+    public const int MaxMediaIngressPorts = 4;
+
+    /// <summary>
+    /// Reject a media configuration that would deploy but not work, or that
+    /// would silently expose the ports to the internet.
+    /// </summary>
+    public void ValidateMediaIngress()
+    {
+        if (!MediaIngressEnabled)
+        {
+            return;
+        }
+
+        var ports = MediaIngressPorts;
+        if (ports.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressEnabled requires mediaIngressPorts; an empty list would "
+                + "create a paid load balancer that forwards nothing.");
+        }
+
+        if (ports.Length > MaxMediaIngressPorts)
+        {
+            throw new InvalidOperationException(
+                $"mediaIngressPorts allows at most {MaxMediaIngressPorts} ports "
+                + "(ECS permits five target groups per service and the load balancer "
+                + $"already uses one); got {ports.Length}.");
+        }
+
+        if (ports.Distinct().Count() != ports.Length)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressPorts must be distinct; duplicates would collide as "
+                + "resource names and listeners.");
+        }
+
+        foreach (var port in ports)
+        {
+            if (port is < 1 or > 65535)
+            {
+                throw new InvalidOperationException(
+                    $"mediaIngressPorts contains an invalid port: {port}.");
+            }
+        }
+
+        // Fail closed. An empty list previously meant 0.0.0.0/0, which exposed an
+        // unauthenticated UDP parser to the internet from a single boolean — too
+        // easy to do by accident for a product other people self-host. Operators
+        // who genuinely want that must now say so explicitly.
+        var cidrs = MediaIngressAllowedCidrs;
+        if (cidrs.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressEnabled requires mediaIngressAllowedCidrs. Set your "
+                + "provider's media ranges, or \"0.0.0.0/0\" to deliberately accept "
+                + "media from anywhere.");
+        }
+
+        foreach (var cidr in cidrs)
+        {
+            var parts = cidr.Split('/');
+            if (parts.Length != 2
+                || !System.Net.IPAddress.TryParse(parts[0], out _)
+                || !int.TryParse(parts[1], out var prefix)
+                || prefix is < 0 or > 32)
+            {
+                throw new InvalidOperationException(
+                    $"mediaIngressAllowedCidrs contains an invalid CIDR: {cidr}");
+            }
+        }
+    }
+
     // ===================
     // Resource Naming
     // ===================

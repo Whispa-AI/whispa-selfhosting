@@ -290,8 +290,8 @@ pulumi up
 | Key | Default | Description |
 |-----|---------|-------------|
 | `whispa:mediaIngressEnabled` | `false` | Deploy the inbound UDP media path (NLB + listeners + target groups) |
-| `whispa:mediaIngressPorts` | `[42010, 42011]` | UDP ports forwarded to the backend task. One listener and target group per port |
-| `whispa:mediaIngressAllowedCidrs` | `[]` (open) | Source ranges allowed to send media. **Leave unset and the ports are open to the internet** — set your provider's media ranges |
+| `whispa:mediaIngressPorts` | `[42010, 42011]` | UDP ports forwarded to the backend task, at most four. One listener and target group per port (ECS permits five per service, and the ALB uses one) |
+| `whispa:mediaIngressAllowedCidrs` | (none) | **Required.** Source ranges allowed to send media — your provider's media ranges, or `0.0.0.0/0` to deliberately accept media from anywhere |
 
 After `pulumi up`, the `mediaAdvertiseAddress` stack output holds the static
 address the provider must send media to:
@@ -312,8 +312,18 @@ container as `TCN_MEDIA_ADVERTISE_ADDRESS`, along with `TCN_MEDIA_RTP_PORTS`.
 - A few ports serve any number of concurrent calls. The application shares them
   and distinguishes calls by source address, so this does not need to scale with
   agent count.
-- Health checks run over HTTP against `/health` on port 8000: a UDP target group
-  cannot health-check over UDP, and an unhealthy target receives no traffic.
+- Health checks run over HTTP against `/health` on port 8000, because a UDP
+  target group cannot health-check over UDP. They arrive from the load balancer
+  rather than from a client, so the task's security group admits them by
+  referencing the load balancer's security group; the media ports themselves are
+  admitted by CIDR, since UDP target groups always preserve the client address.
+- The load balancer is placed in **every** public subnet, each with its own
+  Elastic IP, but only the first address is published. The other nodes exist so
+  their availability zones are enabled — cross-zone load balancing only reaches
+  targets in enabled zones, so a task placed in an unmapped zone would receive
+  nothing at all.
+- Enabling this without `mediaIngressAllowedCidrs` is rejected at preview time
+  rather than silently opening the ports to the internet.
 - Replacing a task (any deploy) interrupts media for calls in flight.
 
 ## Environment Variables

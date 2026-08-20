@@ -56,6 +56,7 @@ public class ComputeStack : ComponentResource
         Output<string>? mediaAdvertiseAddress = null,
         int[]? mediaPorts = null,
         Output<ImmutableArray<string>>? mediaTargetGroupArns = null,
+        IReadOnlyList<Resource>? mediaListeners = null,
         ComponentResourceOptions? options = null)
         : base("whispa:compute:ComputeStack", name, options)
     {
@@ -590,7 +591,17 @@ public class ComputeStack : ComponentResource
                 ["Project"] = config.ProjectName,
                 ["Environment"] = config.Environment,
             },
-        }, new CustomResourceOptions { Parent = this, DependsOn = { httpsListener } });
+        }, new CustomResourceOptions
+        {
+            Parent = this,
+            // Registering a target group whose load balancer has no listener yet
+            // is rejected with "target group does not have an associated load
+            // balancer", so the media listeners are dependencies too.
+            DependsOn = mediaListeners is null
+                ? new InputList<Resource> { httpsListener }
+                : new InputList<Resource> { httpsListener }.Concat(
+                    mediaListeners.ToArray()),
+        });
 
         var frontendService = new Service($"{name}-frontend-service", new ServiceArgs
         {

@@ -21,6 +21,9 @@ return await Deployment.RunAsync(() =>
             "autoCertificate requires hostedZoneId to be set.");
     }
 
+    // Fails closed on an unusable or unintentionally open media configuration.
+    config.ValidateMediaIngress();
+
     // ===================
     // Phase 1: Foundation
     // ===================
@@ -75,6 +78,7 @@ return await Deployment.RunAsync(() =>
         mediaIngress = new MediaIngressStack("media-ingress", config,
             vpcId: networking.VpcId,
             publicSubnetIds: networking.PublicSubnetIds,
+            securityGroupId: networking.MediaLoadBalancerSecurityGroupId!,
             healthCheckPort: 8000);
     }
 
@@ -103,7 +107,10 @@ return await Deployment.RunAsync(() =>
         superuserPasswordSecretArn: secrets.SuperuserPasswordSecretArn,
         mediaAdvertiseAddress: mediaIngress?.AdvertiseAddress,
         mediaPorts: mediaIngress?.Ports,
-        mediaTargetGroupArns: mediaIngress?.TargetGroupArns);
+        mediaTargetGroupArns: mediaIngress?.TargetGroupArns,
+        // ECS rejects a target group whose load balancer has no listener yet,
+        // so the service must wait for them.
+        mediaListeners: mediaIngress?.Listeners);
 
     // ===================
     // Phase 5: DNS (Optional)
@@ -144,7 +151,7 @@ return await Deployment.RunAsync(() =>
     // Stack Outputs
     // ===================
 
-    return new Dictionary<string, object?>
+    var outputs = new Dictionary<string, object?>
     {
         // Networking
         ["vpcId"] = networking.VpcId,
@@ -160,11 +167,6 @@ return await Deployment.RunAsync(() =>
 
         // ALB
         ["albDnsName"] = compute.AlbDnsName,
-
-        // Inbound media (if deployed). The advertise address is what the
-        // telephony provider must send RTP to, and what it would allowlist.
-        ["mediaAdvertiseAddress"] = mediaIngress?.AdvertiseAddress,
-        ["mediaDnsName"] = mediaIngress?.DnsName,
 
         // Application URLs
         ["frontendUrl"] = dns.DomainUrl,
@@ -198,4 +200,16 @@ return await Deployment.RunAsync(() =>
                 : Output.Format($"Create DNS records pointing {config.DomainName} and {apiDomain} to {compute.AlbDnsName}"))
             : Output.Create("DNS is configured automatically via Route53"),
     };
+
+    // Added only when deployed, so a stack with media ingress off shows no
+    // stack-output diff either — not just no resource diff.
+    if (mediaIngress is not null)
+    {
+        // The advertise address is what the telephony provider sends RTP to, and
+        // what it would allowlist.
+        outputs["mediaAdvertiseAddress"] = mediaIngress.AdvertiseAddress;
+        outputs["mediaDnsName"] = mediaIngress.DnsName;
+    }
+
+    return outputs;
 });
