@@ -137,8 +137,11 @@ add config for them. Set nothing and it works.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `whispa:llmProvider` | `bedrock` | LLM provider: `bedrock` (recommended, IAM-only), `openrouter`, or `openai`. Determines the default models and whether Bedrock IAM permissions are granted. |
+| `whispa:llmProvider` | `bedrock` | LLM provider: `bedrock` (recommended, IAM-only), `azure`, `openrouter`, or `openai`. Determines the default-model behavior and whether Bedrock IAM permissions are granted. |
 | `whispa:bedrockRegion` | deploy region (`aws:region`) | Region for Bedrock API calls. Only override if Bedrock model availability requires a different region than your deployment. |
+| `whispa:azureOpenAiEndpoint` | — | Azure OpenAI resource endpoint, for example `https://resource.openai.azure.com`. |
+| `whispa:azureOpenAiApiKey` | — | Dedicated Azure OpenAI API key. Set with `pulumi config set --secret`. |
+| `whispa:azureApiVersion` | `2025-04-01-preview` | Azure OpenAI API version passed to LiteLLM. |
 
 The recommended models are defined in the backend image (so they move with each
 release). In AU regions (`ap-southeast-2`/`-4`) that's a cost-optimized open-weight
@@ -153,11 +156,23 @@ Pin a specific model (provider prefix required), globally or per analyzer:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `whispa:llmModelDefault` | derived from `llmProvider` + region | Default model for all analyzers |
-| `whispa:llmModelActionCards` / `…Workflow` / `…SuggestedResponses` / `…Sentiment` / `…Coaching` / `…Summary` / `…Classification` / `…Scorecard` | (uses default) | Per-analyzer overrides |
+| `whispa:llmModelActionCards` / `…IdentityVerification` / `…Coaching` / `…Summary` / `…Tagging` / `…Outcome` / `…Client` / `…Classification` / `…Chat` / `…Scorecard` / `…Narrative` / `…Supervisor` | (uses default) | Per-workload overrides |
+| `whispa:llmModelSummaryFallback` / `…OutcomeFallback` | provider recommendation or none | Explicit recovery deployments for summary and outcome processing |
 
 **Provider prefixes:**
 - `bedrock/` — AWS Bedrock (IAM role, no API key). Example: `bedrock/au.anthropic.claude-haiku-4-5-20251001-v1:0`
+- `azure/` — Azure OpenAI (requires endpoint and API key). The suffix is your Azure deployment name, not necessarily the underlying model name. Example: `azure/whispa-gpt-56-luna`
 - `openrouter/` — OpenRouter (requires `llmApiKey`). Example: `openrouter/google/gemini-2.5-flash`
+
+Azure deployment names are customer-defined, so `whispa:llmModelDefault` is
+required when `whispa:llmProvider` is `azure`. Configure it with:
+
+```bash
+pulumi config set whispa:llmProvider azure
+pulumi config set whispa:azureOpenAiEndpoint https://YOUR-RESOURCE.openai.azure.com
+pulumi config set --secret whispa:azureOpenAiApiKey YOUR_KEY
+pulumi config set whispa:llmModelDefault azure/YOUR-DEPLOYMENT
+```
 
 **Note:** When `llmProvider` is `bedrock` (the default), the deployment grants
 `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` to the ECS task
@@ -343,14 +358,24 @@ These environment variables are automatically set from Pulumi configuration in t
 | `CORS_ORIGINS` | `whispa:corsOrigins` | Allowed CORS origins (JSON array) |
 | `LLM_API_KEY` | Secrets Manager | OpenRouter/OpenAI API key (if configured) |
 | `LLM_BASE_URL` | `whispa:llmBaseUrl` | Custom LLM API base URL |
+| `AZURE_OPENAI_API_KEY` | Secrets Manager | Dedicated Azure OpenAI API key (if configured) |
+| `AZURE_OPENAI_ENDPOINT` | `whispa:azureOpenAiEndpoint` | Azure OpenAI resource endpoint |
+| `AZURE_API_VERSION` | `whispa:azureApiVersion` | Azure API version passed to LiteLLM |
 | `LLM_MODEL_DEFAULT` | `whispa:llmModelDefault` | Default LLM model identifier |
 | `LLM_MODEL_ACTION_CARDS` | `whispa:llmModelActionCards` | Model for action cards analyzer |
-| `LLM_MODEL_WORKFLOW` | `whispa:llmModelWorkflow` | Model for workflow progress analyzer |
-| `LLM_MODEL_SUGGESTED_RESPONSES` | `whispa:llmModelSuggestedResponses` | Model for suggested responses analyzer |
-| `LLM_MODEL_SENTIMENT` | `whispa:llmModelSentiment` | Model for sentiment analyzer |
+| `LLM_MODEL_IDENTITY_VERIFICATION` | `whispa:llmModelIdentityVerification` | Model for identity verification |
 | `LLM_MODEL_COACHING` | `whispa:llmModelCoaching` | Model for coaching feedback |
 | `LLM_MODEL_SUMMARY` | `whispa:llmModelSummary` | Model for summary generation |
+| `LLM_MODEL_SUMMARY_FALLBACK` | `whispa:llmModelSummaryFallback` | Summary recovery model |
+| `LLM_MODEL_TAGGING` | `whispa:llmModelTagging` | Model for scenario-linked call tagging |
+| `LLM_MODEL_OUTCOME` | `whispa:llmModelOutcome` | Model for commitment outcome extraction |
+| `LLM_MODEL_OUTCOME_FALLBACK` | `whispa:llmModelOutcomeFallback` | Outcome recovery model |
+| `LLM_MODEL_CLIENT` | `whispa:llmModelClient` | Model for client classification |
 | `LLM_MODEL_CLASSIFICATION` | `whispa:llmModelClassification` | Model for call classification |
+| `LLM_MODEL_CHAT` | `whispa:llmModelChat` | Model for in-call chat |
+| `LLM_MODEL_SCORECARD` | `whispa:llmModelScorecard` | Model for QA scorecards |
+| `LLM_MODEL_NARRATIVE` | `whispa:llmModelNarrative` | Model for QA insights narratives |
+| `LLM_MODEL_SUPERVISOR` | `whispa:llmModelSupervisor` | Model for AI caller supervisor escalation |
 | `AWS_BEDROCK_REGION` | `whispa:bedrockRegion` | AWS region for Bedrock API calls |
 | `AWS_TRANSCRIBE_REGION` | `aws:region` | AWS Transcribe region |
 | `AWS_CONNECT_REGION` | `aws:region` | AWS Connect region |

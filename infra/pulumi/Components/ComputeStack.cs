@@ -356,17 +356,25 @@ public class ComputeStack : ComponentResource
 
                         // LLM base URL (if custom)
                         new { name = "LLM_BASE_URL", value = config.LlmBaseUrl ?? "" },
+                        new { name = "AZURE_OPENAI_ENDPOINT", value = config.AzureOpenAiEndpoint ?? "" },
+                        new { name = "AZURE_API_VERSION", value = config.AzureApiVersion },
 
                         // LLM model configuration
                         new { name = "LLM_MODEL_DEFAULT", value = config.LlmModelDefault ?? "" },
                         new { name = "LLM_MODEL_ACTION_CARDS", value = config.LlmModelActionCards ?? "" },
-                        new { name = "LLM_MODEL_WORKFLOW", value = config.LlmModelWorkflow ?? "" },
-                        new { name = "LLM_MODEL_SUGGESTED_RESPONSES", value = config.LlmModelSuggestedResponses ?? "" },
-                        new { name = "LLM_MODEL_SENTIMENT", value = config.LlmModelSentiment ?? "" },
+                        new { name = "LLM_MODEL_IDENTITY_VERIFICATION", value = config.LlmModelIdentityVerification ?? "" },
                         new { name = "LLM_MODEL_COACHING", value = config.LlmModelCoaching ?? "" },
                         new { name = "LLM_MODEL_SUMMARY", value = config.LlmModelSummary ?? "" },
+                        new { name = "LLM_MODEL_SUMMARY_FALLBACK", value = config.LlmModelSummaryFallback ?? "" },
+                        new { name = "LLM_MODEL_TAGGING", value = config.LlmModelTagging ?? "" },
+                        new { name = "LLM_MODEL_OUTCOME", value = config.LlmModelOutcome ?? "" },
+                        new { name = "LLM_MODEL_OUTCOME_FALLBACK", value = config.LlmModelOutcomeFallback ?? "" },
+                        new { name = "LLM_MODEL_CLIENT", value = config.LlmModelClient ?? "" },
                         new { name = "LLM_MODEL_CLASSIFICATION", value = config.LlmModelClassification ?? "" },
+                        new { name = "LLM_MODEL_CHAT", value = config.LlmModelChat ?? "" },
                         new { name = "LLM_MODEL_SCORECARD", value = config.LlmModelScorecard ?? "" },
+                        new { name = "LLM_MODEL_NARRATIVE", value = config.LlmModelNarrative ?? "" },
+                        new { name = "LLM_MODEL_SUPERVISOR", value = config.LlmModelSupervisor ?? "" },
 
                         // LLM provider (drives the backend's zero-config default model)
                         new { name = "LLM_PROVIDER", value = config.LlmProvider },
@@ -421,6 +429,7 @@ public class ComputeStack : ComponentResource
                         dbSecretArn,
                         superuserSecretArn,
                         config.HasLlmApiKey,
+                        config.HasAzureOpenAiApiKey,
                         config.HasDeepgramApiKey,
                         config.HasElevenlabsApiKey,
                         config.HasAssemblyaiApiKey,
@@ -674,6 +683,7 @@ public class ComputeStack : ComponentResource
         string dbSecretArn,
         string superuserPasswordSecretArn,
         bool hasLlmApiKey,
+        bool hasAzureOpenAiApiKey,
         bool hasDeepgram,
         bool hasElevenlabs,
         bool hasAssemblyai,
@@ -701,6 +711,11 @@ public class ComputeStack : ComponentResource
         if (hasLlmApiKey)
         {
             secrets.Add(new { name = "LLM_API_KEY", valueFrom = $"{apiSecretArn}:LLM_API_KEY::" });
+        }
+
+        if (hasAzureOpenAiApiKey)
+        {
+            secrets.Add(new { name = "AZURE_OPENAI_API_KEY", valueFrom = $"{apiSecretArn}:AZURE_OPENAI_API_KEY::" });
         }
 
         // Only include optional transcription provider keys if configured

@@ -165,6 +165,7 @@ public class SecretsStack : ComponentResource
         // Note: We use Output.All to handle the potentially null optional keys
         var apiKeysJson = Output.All(
             config.LlmApiKey ?? Output.Create(""),
+            config.AzureOpenAiApiKey ?? Output.Create(""),
             config.DeepgramApiKey ?? Output.Create(""),
             config.ElevenlabsApiKey ?? Output.Create(""),
             config.AssemblyaiApiKey ?? Output.Create(""),
@@ -180,22 +181,25 @@ public class SecretsStack : ComponentResource
                 dict["LLM_API_KEY"] = keys[0];
 
             if (!string.IsNullOrEmpty(keys[1]))
-                dict["DEEPGRAM_API_KEY"] = keys[1];
+                dict["AZURE_OPENAI_API_KEY"] = keys[1];
 
             if (!string.IsNullOrEmpty(keys[2]))
-                dict["ELEVENLABS_API_KEY"] = keys[2];
+                dict["DEEPGRAM_API_KEY"] = keys[2];
 
             if (!string.IsNullOrEmpty(keys[3]))
-                dict["ASSEMBLYAI_API_KEY"] = keys[3];
+                dict["ELEVENLABS_API_KEY"] = keys[3];
 
             if (!string.IsNullOrEmpty(keys[4]))
-                dict["LANGFUSE_SECRET_KEY"] = keys[4];
+                dict["ASSEMBLYAI_API_KEY"] = keys[4];
 
             if (!string.IsNullOrEmpty(keys[5]))
-                dict["LIVEKIT_API_KEY"] = keys[5];
+                dict["LANGFUSE_SECRET_KEY"] = keys[5];
 
             if (!string.IsNullOrEmpty(keys[6]))
-                dict["LIVEKIT_API_SECRET"] = keys[6];
+                dict["LIVEKIT_API_KEY"] = keys[6];
+
+            if (!string.IsNullOrEmpty(keys[7]))
+                dict["LIVEKIT_API_SECRET"] = keys[7];
 
             // Generic secret passthrough: each key becomes an env var sourced from this secret
             // (see WhispaConfig.ExtraSecrets / ComputeStack). Keyed by the env var name.
