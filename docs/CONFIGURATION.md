@@ -111,9 +111,36 @@ S3 bucket is always created with:
 - Versioning enabled
 - Server-side encryption (AES-256)
 - Public access blocked
+- CORS allowing `GET`/`PUT`/`POST` from the frontend origin (`whispa:frontendUrl`)
 - Lifecycle rules: move to IA after 30 days, Glacier after 90 days
 
 These settings are not currently configurable via Pulumi config.
+
+### Bring-your-own bucket
+
+Deployments that don't use the Pulumi stack (e.g. a Coolify/EC2 install with a
+hand-created bucket in `S3_AUDIO_BUCKET`) must configure the bucket's CORS
+themselves. **In-app audio playback hard-requires it**: the player's `<audio>`
+element uses `crossorigin="anonymous"`, so without a CORS rule the browser
+rejects the presigned-URL response ("The element has no supported sources")
+even though the file itself is fine. Allow at least `GET` from the app origin:
+
+```bash
+aws s3api put-bucket-cors --bucket <your-audio-bucket> --cors-configuration '{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["https://your-whispa-domain.example.com"],
+      "AllowedMethods": ["GET", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["Content-Range", "Accept-Ranges", "Content-Length"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}'
+```
+
+Local MinIO (the whispa repo's docker-compose) is not affected — it allows all
+origins by default.
 
 ## Speech-to-Text Configuration
 
