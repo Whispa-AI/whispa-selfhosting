@@ -25,7 +25,7 @@ Before you begin, ensure you have:
 - [ ] [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) installed
 - [ ] AWS CLI configured with credentials
 
-**LLM:** Works out of the box with **AWS Bedrock** — no API key (it uses the ECS task's IAM role) and **no model configuration needed**; the backend ships Whispa's recommended model per analyzer. To override a model or use OpenRouter instead, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+**LLM:** Works out of the box with **AWS Bedrock** — no API key (it uses the ECS task's IAM role) and **no model configuration needed**; the backend ships Whispa's recommended model per analyzer. Enable [Bedrock model access](docs/CONFIGURATION.md#bedrock-model-access-one-time-per-aws-account) once per AWS account. To override a model or use OpenRouter instead, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 **Speech-to-text:** AWS Transcribe is recommended (uses IAM role, no API key needed). Alternatively, you can use AssemblyAI, Deepgram, or ElevenLabs.
 

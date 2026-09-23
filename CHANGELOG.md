@@ -31,6 +31,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   turns it off. The Pulumi-created topic gets a policy allowing EventBridge to
   publish; an existing `alarmSnsTopicArn` topic must allow it itself.
 
+### Changed
+- Docs: Bedrock models need a one-time Marketplace subscription per AWS account
+  (the task role can't do it). Previously the docs said Bedrock needed no setup,
+  which let an unsubscribed Claude Sonnet 4.6 roll back an upgrade. The docs now
+  list every model family in the recommended set and explain how the backend's
+  startup check reports a model it can't reach.
+
 ## [0.0.145] - 2026-09-21
 
 ## [0.0.144] - 2026-09-08
