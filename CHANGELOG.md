@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.146] - 2026-09-23
+
 ### Fixed
 - `pulumi up` now fails when an ECS service rolls back. The deployment circuit
   breaker rolled failed releases back after `pulumi up` had already reported
