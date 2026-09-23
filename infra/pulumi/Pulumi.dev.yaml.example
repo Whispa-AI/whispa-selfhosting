@@ -69,8 +69,15 @@ config:
   # Claude Haiku 4.5 inference profile automatically. Leave everything below unset
   # for the common case.
   #
-  # whispa:llmProvider: bedrock          # bedrock (default) | openrouter | openai
+  # whispa:llmProvider: bedrock          # bedrock (default) | azure | openrouter | openai
   # whispa:bedrockRegion: ap-southeast-2 # only if Bedrock must run in a different region than aws:region
+
+  # Azure OpenAI instead of Bedrock (requires a key, endpoint, and deployment name):
+  # whispa:llmProvider: azure
+  # whispa:azureOpenAiEndpoint: https://YOUR-RESOURCE.openai.azure.com
+  # whispa:azureApiVersion: 2025-04-01-preview
+  # whispa:llmModelDefault: azure/YOUR-DEPLOYMENT
+  # Set with: pulumi config set --secret whispa:azureOpenAiApiKey YOUR_KEY
 
   # OpenRouter instead of Bedrock (requires an API key + an explicit model):
   # whispa:llmProvider: openrouter

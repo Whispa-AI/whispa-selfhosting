@@ -163,6 +163,18 @@ public class WhispaConfig
     /// <summary>LLM base URL (optional, defaults to OpenRouter)</summary>
     public string? LlmBaseUrl => _config.Get("llmBaseUrl");
 
+    /// <summary>Dedicated Azure OpenAI API key</summary>
+    public Output<string>? AzureOpenAiApiKey => _config.GetSecret("azureOpenAiApiKey");
+
+    /// <summary>Whether a dedicated Azure OpenAI API key is configured</summary>
+    public bool HasAzureOpenAiApiKey => _config.Get("azureOpenAiApiKey") != null;
+
+    /// <summary>Azure OpenAI resource endpoint</summary>
+    public string? AzureOpenAiEndpoint => _config.Get("azureOpenAiEndpoint");
+
+    /// <summary>Azure OpenAI API version used by LiteLLM</summary>
+    public string AzureApiVersion => _config.Get("azureApiVersion") ?? "2025-04-01-preview";
+
     /// <summary>Deepgram API key (optional - for Deepgram STT)</summary>
     public Output<string>? DeepgramApiKey => _config.GetSecret("deepgramApiKey");
 
@@ -214,14 +226,8 @@ public class WhispaConfig
     /// <summary>LLM model for action cards analyzer</summary>
     public string? LlmModelActionCards => _config.Get("llmModelActionCards");
 
-    /// <summary>LLM model for workflow progress analyzer</summary>
-    public string? LlmModelWorkflow => _config.Get("llmModelWorkflow");
-
-    /// <summary>LLM model for suggested responses analyzer</summary>
-    public string? LlmModelSuggestedResponses => _config.Get("llmModelSuggestedResponses");
-
-    /// <summary>LLM model for sentiment analyzer</summary>
-    public string? LlmModelSentiment => _config.Get("llmModelSentiment");
+    /// <summary>LLM model for identity verification</summary>
+    public string? LlmModelIdentityVerification => _config.Get("llmModelIdentityVerification");
 
     /// <summary>LLM model for coaching feedback</summary>
     public string? LlmModelCoaching => _config.Get("llmModelCoaching");
@@ -229,21 +235,45 @@ public class WhispaConfig
     /// <summary>LLM model for summary generation</summary>
     public string? LlmModelSummary => _config.Get("llmModelSummary");
 
+    /// <summary>Fallback LLM model for summary generation</summary>
+    public string? LlmModelSummaryFallback => _config.Get("llmModelSummaryFallback");
+
+    /// <summary>LLM model for scenario-linked call tagging</summary>
+    public string? LlmModelTagging => _config.Get("llmModelTagging");
+
+    /// <summary>LLM model for commitment outcome extraction</summary>
+    public string? LlmModelOutcome => _config.Get("llmModelOutcome");
+
+    /// <summary>Fallback LLM model for commitment outcome extraction</summary>
+    public string? LlmModelOutcomeFallback => _config.Get("llmModelOutcomeFallback");
+
+    /// <summary>LLM model for post-call client classification</summary>
+    public string? LlmModelClient => _config.Get("llmModelClient");
+
     /// <summary>LLM model for call classification</summary>
     public string? LlmModelClassification => _config.Get("llmModelClassification");
 
+    /// <summary>LLM model for in-call chat</summary>
+    public string? LlmModelChat => _config.Get("llmModelChat");
+
     /// <summary>LLM model for QA scorecard generation</summary>
     public string? LlmModelScorecard => _config.Get("llmModelScorecard");
+
+    /// <summary>LLM model for QA insights narratives</summary>
+    public string? LlmModelNarrative => _config.Get("llmModelNarrative");
+
+    /// <summary>LLM model for AI caller supervisor escalation</summary>
+    public string? LlmModelSupervisor => _config.Get("llmModelSupervisor");
 
     // ===================
     // AWS Bedrock Configuration
     // ===================
 
     /// <summary>
-    /// Default LLM provider passed to the backend (bedrock | openrouter | openai).
+    /// Default LLM provider passed to the backend (bedrock | azure | openrouter | openai).
     /// "bedrock" (default) needs no API key and works with zero model config —
     /// the backend derives a region-appropriate Claude default. Set to a
-    /// non-Bedrock provider only if you supply llmApiKey + model overrides.
+    /// non-Bedrock provider only with its credentials and model overrides.
     /// </summary>
     public string LlmProvider => _config.Get("llmProvider") ?? "bedrock";
 
