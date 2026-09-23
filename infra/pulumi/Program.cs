@@ -112,6 +112,15 @@ return await Deployment.RunAsync(() =>
         // so the service must wait for them.
         mediaListeners: mediaIngress?.Listeners);
 
+    // Alert on failed deployments: ECS rolls them back on its own, silently.
+    if (config.EnableDeploymentAlerts && monitoring.AlertTopicArn is not null)
+    {
+        _ = new DeploymentAlertsStack("deployment-alerts", config,
+            alertTopicArn: monitoring.AlertTopicArn,
+            backendServiceArn: compute.BackendServiceArn,
+            frontendServiceArn: compute.FrontendServiceArn);
+    }
+
     // ===================
     // Phase 5: DNS (Optional)
     // ===================

@@ -216,11 +216,15 @@ config:
 
   # whispa:sentryDsn: https://xxx@sentry.io/xxx
 
-  # RDS I/O CloudWatch alarms
-  # Alarms are created automatically for the RDS instance managed by this stack
-  # when you provide either an existing SNS topic ARN or an email address.
-  # If only alarmEmailAddress is set, Pulumi creates an SNS topic and subscribes the address.
+  # Alerts: RDS I/O CloudWatch alarms and failed-deployment alerts
+  # Both are created automatically when you provide either an existing SNS topic
+  # ARN or an email address. If only alarmEmailAddress is set, Pulumi creates an
+  # SNS topic and subscribes the address (confirm the subscription email).
+  # A failed-deployment alert fires when ECS rolls a backend/frontend release back,
+  # which otherwise leaves the previous version serving without any signal.
+  # An existing topic's policy must allow events.amazonaws.com to sns:Publish.
   # whispa:enableRdsIoAlarms: "true"
+  # whispa:enableDeploymentAlerts: "true"
   # whispa:alarmEmailAddress: dba-alerts@yourcompany.com
   # whispa:alarmSnsTopicArn: arn:aws:sns:us-east-1:123456789012:existing-topic
   # whispa:rdsInstanceIdentifiers:
