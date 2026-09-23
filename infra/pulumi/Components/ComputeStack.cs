@@ -33,6 +33,12 @@ public class ComputeStack : ComponentResource
     /// <summary>Frontend URL (public)</summary>
     public Output<string> FrontendUrl { get; }
 
+    /// <summary>Backend ECS service ARN</summary>
+    public Output<string> BackendServiceArn { get; }
+
+    /// <summary>Frontend ECS service ARN</summary>
+    public Output<string> FrontendServiceArn { get; }
+
     public ComputeStack(
         string name,
         WhispaConfig config,
@@ -676,6 +682,8 @@ public class ComputeStack : ComponentResource
         var apiDomain = string.IsNullOrWhiteSpace(config.ApiDomainName) ? config.DomainName : config.ApiDomainName;
         BackendUrl = Output.Format($"https://{apiDomain}");
         FrontendUrl = Output.Format($"https://{config.DomainName}");
+        BackendServiceArn = backendService.Id;
+        FrontendServiceArn = frontendService.Id;
 
         RegisterOutputs();
     }

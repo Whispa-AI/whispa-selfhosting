@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Pulumi;
+using Pulumi.Aws;
 using Pulumi.Aws.CloudWatch;
 using Pulumi.Aws.Sns;
 using Whispa.Aws.Pulumi.Configuration;
@@ -9,6 +11,7 @@ namespace Whispa.Aws.Pulumi.Components;
 /// Creates CloudWatch monitoring infrastructure:
 /// - Log groups for ECS containers
 /// - Log retention policies
+/// - The alert topic (optional) shared by RDS alarms and deployment alerts
 /// - Optional RDS I/O alarms
 /// </summary>
 public class MonitoringStack : ComponentResource
@@ -24,6 +27,9 @@ public class MonitoringStack : ComponentResource
 
     /// <summary>Frontend log group ARN</summary>
     public Output<string> FrontendLogGroupArn { get; }
+
+    /// <summary>SNS topic for alerts; null when no alert destination is configured</summary>
+    public Output<string>? AlertTopicArn { get; }
 
     public MonitoringStack(
         string name,
@@ -69,32 +75,37 @@ public class MonitoringStack : ComponentResource
         FrontendLogGroupName = frontendLogGroup.Name;
         FrontendLogGroupArn = frontendLogGroup.Arn;
 
-        ConfigureRdsIoAlarms(name, config, managedDbInstanceIdentifier);
+        AlertTopicArn = ConfigureAlertTopic(name, config);
+        ConfigureRdsIoAlarms(name, config, managedDbInstanceIdentifier, AlertTopicArn);
 
         RegisterOutputs();
     }
 
-    private void ConfigureRdsIoAlarms(string name, WhispaConfig config, Input<string> managedDbInstanceIdentifier)
+    private Output<string>? ConfigureAlertTopic(string name, WhispaConfig config)
     {
-        if (!config.EnableRdsIoAlarms)
+        if (!config.EnableRdsIoAlarms && !config.EnableDeploymentAlerts)
         {
-            return;
+            return null;
         }
 
         if (string.IsNullOrWhiteSpace(config.AlarmSnsTopicArn) && string.IsNullOrWhiteSpace(config.AlarmEmailAddress))
         {
             throw new InvalidOperationException(
-                "enableRdsIoAlarms requires either alarmSnsTopicArn or alarmEmailAddress to be configured.");
+                "enableRdsIoAlarms and enableDeploymentAlerts require either alarmSnsTopicArn or alarmEmailAddress to be configured.");
         }
 
         Output<string> alarmTopicArn;
 
         if (!string.IsNullOrWhiteSpace(config.AlarmSnsTopicArn))
         {
+            // An existing topic's policy is its owner's; it must allow
+            // events.amazonaws.com to publish for deployment alerts.
             alarmTopicArn = Output.Create(config.AlarmSnsTopicArn);
         }
         else
         {
+            // Named for its first use (RDS alarms); renaming would replace the
+            // topic and drop confirmed email subscriptions.
             var alarmTopic = new Topic($"{name}-rds-io-alarms", new TopicArgs
             {
                 Name = config.ResourceName("rds-io-alarms"),
@@ -103,8 +114,47 @@ public class MonitoringStack : ComponentResource
                     ["Name"] = config.ResourceName("rds-io-alarms"),
                     ["Project"] = config.ProjectName,
                     ["Environment"] = config.Environment,
-                    ["Purpose"] = "RDS I/O Monitoring",
+                    ["Purpose"] = "Whispa alerts",
                 },
+            }, new CustomResourceOptions { Parent = this });
+
+            // Replaces the default policy: keep its same-account access (which
+            // CloudWatch alarms rely on) and let EventBridge rules in this
+            // account publish.
+            var accountId = Output.Create(GetCallerIdentity.InvokeAsync()).Apply(id => id.AccountId);
+            _ = new TopicPolicy($"{name}-rds-io-alarms-policy", new TopicPolicyArgs
+            {
+                Arn = alarmTopic.Arn,
+                Policy = Output.Tuple(alarmTopic.Arn, accountId).Apply(values => JsonSerializer.Serialize(new
+                {
+                    Version = "2012-10-17",
+                    Statement = new object[]
+                    {
+                        new
+                        {
+                            Sid = "SameAccountAccess",
+                            Effect = "Allow",
+                            Principal = new { AWS = "*" },
+                            Action = new[]
+                            {
+                                "sns:GetTopicAttributes", "sns:SetTopicAttributes", "sns:AddPermission",
+                                "sns:RemovePermission", "sns:DeleteTopic", "sns:Subscribe",
+                                "sns:ListSubscriptionsByTopic", "sns:Publish",
+                            },
+                            Resource = values.Item1,
+                            Condition = new { StringEquals = new Dictionary<string, string> { ["AWS:SourceOwner"] = values.Item2 } },
+                        },
+                        new
+                        {
+                            Sid = "EventBridgePublish",
+                            Effect = "Allow",
+                            Principal = new { Service = "events.amazonaws.com" },
+                            Action = "sns:Publish",
+                            Resource = values.Item1,
+                            Condition = new { StringEquals = new Dictionary<string, string> { ["aws:SourceAccount"] = values.Item2 } },
+                        },
+                    },
+                })),
             }, new CustomResourceOptions { Parent = this });
 
             alarmTopicArn = alarmTopic.Arn;
@@ -118,6 +168,17 @@ public class MonitoringStack : ComponentResource
                 Protocol = "email",
                 Endpoint = config.AlarmEmailAddress,
             }, new CustomResourceOptions { Parent = this });
+        }
+
+        return alarmTopicArn;
+    }
+
+    private void ConfigureRdsIoAlarms(
+        string name, WhispaConfig config, Input<string> managedDbInstanceIdentifier, Output<string>? alarmTopicArn)
+    {
+        if (!config.EnableRdsIoAlarms || alarmTopicArn is null)
+        {
+            return;
         }
 
         CreateInstanceIoAlarms(

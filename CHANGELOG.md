@@ -24,6 +24,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Warning when the backend and frontend images resolve to different versions.
 - The example deploy workflow runs `pulumi up --refresh` (so a retry after a
   rollback redeploys) and checks that `/health` reports the deployed version.
+- Failed-deployment alert: an EventBridge rule sends ECS `SERVICE_DEPLOYMENT_FAILED`
+  events for the backend and frontend to the alert topic, so a release the
+  circuit breaker rolled back no longer goes unnoticed. On by default when
+  `alarmEmailAddress` or `alarmSnsTopicArn` is set; `whispa:enableDeploymentAlerts`
+  turns it off. The Pulumi-created topic gets a policy allowing EventBridge to
+  publish; an existing `alarmSnsTopicArn` topic must allow it itself.
 
 ## [0.0.145] - 2026-09-21
 

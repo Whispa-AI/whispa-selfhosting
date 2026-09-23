@@ -382,10 +382,16 @@ public class WhispaConfig
         ?? (!string.IsNullOrWhiteSpace(AlarmSnsTopicArn)
             || !string.IsNullOrWhiteSpace(AlarmEmailAddress));
 
+    /// <summary>Whether to alert when an ECS deployment fails (default: enabled when SNS/email config is provided)</summary>
+    public bool EnableDeploymentAlerts =>
+        _config.GetBoolean("enableDeploymentAlerts")
+        ?? (!string.IsNullOrWhiteSpace(AlarmSnsTopicArn)
+            || !string.IsNullOrWhiteSpace(AlarmEmailAddress));
+
     /// <summary>Existing SNS topic ARN for CloudWatch alarm notifications (optional)</summary>
     public string? AlarmSnsTopicArn => _config.Get("alarmSnsTopicArn");
 
-    /// <summary>Email address to subscribe to the RDS alarm SNS topic (optional)</summary>
+    /// <summary>Email address to subscribe to the alert SNS topic (optional)</summary>
     public string? AlarmEmailAddress => _config.Get("alarmEmailAddress");
 
     /// <summary>DiskQueueDepth alarm threshold (default: 10)</summary>
