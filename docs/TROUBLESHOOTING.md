@@ -35,9 +35,12 @@ schema while the previous backend serves it. Fix the cause and redeploy promptly
 1. Find why the new tasks were stopped: the error lists recent service events;
    the stopped tasks' logs have the detail (see [ECS Tasks Failing to Start](#ecs-tasks-failing-to-start)).
    A common cause is the backend's LLM preflight: `/health` stays unhealthy while
-   a configured model fails, e.g. a Bedrock model the account has not enabled
+   an analyzer has no working model (on v0.0.141–v0.0.145, while *any* configured
+   model fails), e.g. a Bedrock model the account has not enabled
    (`LLM preflight failed for ...`, AWS Marketplace access denied). Enable the
-   model in the Bedrock console, or point that workload at a model you have.
+   model in the Bedrock console (see
+   [Bedrock model access](CONFIGURATION.md#bedrock-model-access-one-time-per-aws-account)),
+   or point that workload at a model you have.
 2. Redeploy with `pulumi up --refresh`. Without `--refresh`, Pulumi still believes
    the new task definition is live and the rollout check keeps failing.
 

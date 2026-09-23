@@ -182,7 +182,9 @@ Depending on your configuration, you may need:
 **Note:** On AWS, the recommended LLM (Bedrock) and STT (Transcribe) both
 authenticate via your ECS task IAM role — **no external API keys to manage**.
 Bedrock needs no model configuration either; the backend ships Whispa's
-recommended models per analyzer. See [CONFIGURATION.md](CONFIGURATION.md#llm-configuration).
+recommended models per analyzer. An AWS admin must enable access to those models
+once per account, or the backend won't start: see
+[Bedrock model access](CONFIGURATION.md#bedrock-model-access-one-time-per-aws-account).
 
 ## Checklist
 
@@ -193,7 +195,7 @@ Before proceeding to deployment, confirm:
 - [ ] AWS CLI installed and configured
 - [ ] AWS account with sufficient permissions
 - [ ] Domain name available
-- [ ] LLM ready: AWS Bedrock (no key needed, default) OR an OpenRouter/OpenAI API key
+- [ ] LLM ready: AWS Bedrock (no key needed, default; model access enabled) OR an OpenRouter/OpenAI API key
 - [ ] Speech-to-text ready: AWS Transcribe (no key needed) OR Deepgram/AssemblyAI/ElevenLabs API key
 
 ## Next Steps

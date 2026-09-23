@@ -133,7 +133,8 @@ These settings are not currently configurable via Pulumi config.
 (`bedrock`), the deployment grants Bedrock IAM permissions automatically and the
 backend runs **Whispa's recommended per-analyzer model set** (no API key needed).
 New analyzers ship with a recommended model in each release, so you never have to
-add config for them. Set nothing and it works.
+add config for them. The one thing to do yourself is enable model access once per
+AWS account (below).
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -148,6 +149,45 @@ release). In AU regions (`ap-southeast-2`/`-4`) that's a cost-optimized open-wei
 mix with Claude for the scorecard; other Bedrock regions, where those open-weight
 models aren't available, fall back to a region-appropriate Claude Haiku 4.5
 inference profile (`apac.`/`eu.`/`us.`).
+
+### Bedrock model access (one-time, per AWS account)
+
+Third-party models sold through AWS Marketplace, including Anthropic's Claude, are
+subscribed to on an account's **first** invocation, and that call needs
+`aws-marketplace:Subscribe` and `aws-marketplace:ViewSubscriptions`. The ECS task
+role deliberately doesn't have them, so until someone subscribes, calls to that
+model fail with *Model access is denied ... AWS Marketplace actions*.
+
+Enable every model the recommended set uses, primaries and fallbacks, before you
+deploy. In AU regions that is:
+
+| Provider | Models |
+|---|---|
+| Anthropic | Claude Sonnet 4.6, Claude Haiku 4.5 (through the `au.` inference profiles) |
+| Z.AI | GLM-5 |
+| MiniMax | MiniMax M2.5 |
+| Moonshot AI | Kimi K2.5 |
+| DeepSeek | DeepSeek V3.2 |
+| Qwen | Qwen3-Next 80B, Qwen3 235B |
+
+Other Bedrock regions use a region-appropriate Claude Haiku 4.5 profile only. A
+release can add models, so check the release notes when upgrading.
+
+To enable a model, an AWS admin sends one message to it in the Bedrock console
+playground, in `bedrockRegion` (for Claude, through the same inference profile the
+backend uses, e.g. `au.`), then waits a few minutes. Anthropic may also ask for a
+one-time use-case form on first access.
+
+**How a model you haven't enabled shows up.** The backend calls every configured
+model at startup and logs each failure as `LLM preflight failed for <model>: ...`.
+From v0.0.146, most analyzers have a fallback model: if one of the pair answers,
+the service starts **degraded** (it serves traffic on the model that works,
+`/health` reports the LLM check as degraded, and it keeps re-checking the failed
+model every few minutes). Coaching is optional, so its model failing also only
+degrades. The service stays unready, and the deploy fails, only when a required
+analyzer has no working model at all. Earlier releases (v0.0.141–v0.0.145) stay
+unready while *any* configured model fails, so an unsubscribed model rolls the
+upgrade back.
 
 ### Overriding models (advanced)
 
