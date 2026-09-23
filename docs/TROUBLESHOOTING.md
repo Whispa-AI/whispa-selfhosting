@@ -18,9 +18,35 @@ Common issues and their solutions when deploying and running Whispa.
 
 If using Route 53 with `hostedZoneId`, this should be automatic.
 
+### Deploy Fails: Rollout Did Not Complete
+
+**Symptom**: `pulumi up` fails on a `*-backend-rollout` or `*-frontend-rollout`
+resource with `rollout of <task-definition> did not complete` or `... failed`.
+
+The new tasks never became healthy and ECS rolled the service back to the previous
+version (deployment circuit breaker). Pulumi fails on purpose: the service update
+itself succeeded, so without this check the rollback would go unnoticed. The
+frontend is only updated after the backend rolls out, so a failed backend leaves
+both on the previous release.
+
+Migrations run before the health check, so the database may already be on the new
+schema while the previous backend serves it. Fix the cause and redeploy promptly.
+
+1. Find why the new tasks were stopped: the error lists recent service events;
+   the stopped tasks' logs have the detail (see [ECS Tasks Failing to Start](#ecs-tasks-failing-to-start)).
+   A common cause is the backend's LLM preflight: `/health` stays unhealthy while
+   a configured model fails, e.g. a Bedrock model the account has not enabled
+   (`LLM preflight failed for ...`, AWS Marketplace access denied). Enable the
+   model in the Bedrock console, or point that workload at a model you have.
+2. Redeploy with `pulumi up --refresh`. Without `--refresh`, Pulumi still believes
+   the new task definition is live and the rollout check keeps failing.
+
+Do **not** use ECS "Force new deployment" to retry: after a rollback the service
+points at the previous task definition, so it redeploys the old version.
+
 ### ECS Tasks Failing to Start
 
-**Symptom**: `pulumi up` completes but tasks show 0/1 running
+**Symptom**: `pulumi up` fails on a rollout check, or tasks show 0/1 running
 
 **Check task status**:
 ```bash

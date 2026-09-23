@@ -99,8 +99,13 @@ pulumi up
 
 ### Verify Upgrade
 
+`pulumi up` waits for the backend and then the frontend to finish rolling out and
+fails if either is rolled back (see
+[Troubleshooting](TROUBLESHOOTING.md#deploy-fails-rollout-did-not-complete)).
+The `version` in `/health` is the backend release actually serving traffic.
+
 ```bash
-# Check service health
+# Check service health and the running backend version
 curl https://api.yourcompany.com/health
 
 # Check ECS task status

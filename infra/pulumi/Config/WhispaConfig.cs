@@ -24,6 +24,9 @@ public class WhispaConfig
     /// <summary>AWS region for deployment (e.g., "us-east-1", "ap-southeast-2")</summary>
     public string AwsRegion => _awsConfig.Require("region");
 
+    /// <summary>AWS CLI profile Pulumi deploys with, if set (aws:profile)</summary>
+    public string? AwsProfile => _awsConfig.Get("profile");
+
     // ===================
     // Network Configuration
     // ===================

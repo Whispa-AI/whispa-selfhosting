@@ -11,6 +11,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- `pulumi up` now fails when an ECS service rolls back. The deployment circuit
+  breaker rolled failed releases back after `pulumi up` had already reported
+  success, leaving a new frontend on the previous backend without any signal. A
+  rollout check (`scripts/wait-for-ecs-rollout.sh`, needs the AWS CLI) now waits
+  for each new task definition to finish rolling out.
+- The frontend service updates only after the backend has rolled out, so a failed
+  backend no longer leaves the two on different releases.
+
+### Added
+- Warning when the backend and frontend images resolve to different versions.
+- The example deploy workflow runs `pulumi up --refresh` (so a retry after a
+  rollback redeploys) and checks that `/health` reports the deployed version.
+
 ## [0.0.145] - 2026-09-21
 
 ## [0.0.144] - 2026-09-08

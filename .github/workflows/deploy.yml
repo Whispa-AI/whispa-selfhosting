@@ -132,6 +132,7 @@
 #           dotnet-version: "8.0"
 #
 #       - name: Pulumi up
+#         id: up
 #         uses: pulumi/actions@v6
 #         env:
 #           PULUMI_BACKEND_URL: ${{ env.PULUMI_BACKEND_URL }}
@@ -142,9 +143,38 @@
 #           command: up
 #           stack-name: ${{ env.STACK_NAME }}
 #           work-dir: infra/pulumi
+#           # Refresh first so a service ECS rolled back after an earlier failed
+#           # deploy is seen as drift and deployed again, not skipped as unchanged.
+#           refresh: true
 #           # Only applied when a version was entered; otherwise the baked-in
 #           # default tag (Config/Version.cs) is used. Doubled braces are escaped
 #           # for format(); the result is JSON: { "whispa:imageTag": { "value": "X" } }.
 #           # Block scalar (|-) so YAML doesn't choke on the ':' inside the expression.
 #           config-map: |-
 #             ${{ steps.ver.outputs.image_tag && format('{{ "whispa:imageTag": {{ "value": "{0}" }} }}', steps.ver.outputs.image_tag) || '' }}
+#
+#       - name: Verify the backend serves the deployed version
+#         # Pulumi already fails if a service rolls back (scripts/wait-for-ecs-rollout.sh);
+#         # this checks what the live backend reports, which also catches a
+#         # whispa:backendImage override pinning it to another release.
+#         env:
+#           HEALTH_URL: ${{ steps.up.outputs.backendHealthUrl }}
+#           TAG: ${{ steps.ver.outputs.image_tag }}
+#         run: |
+#           set -euo pipefail
+#           if [ -z "$TAG" ]; then
+#             TAG=$(sed -n 's/.*DefaultImageTag = "\(.*\)";/\1/p' infra/pulumi/Config/Version.cs)
+#           fi
+#           if [ "$TAG" = "0.0.0-dev" ]; then
+#             echo "Unreleased checkout (deploys :latest) — no version to compare"
+#             exit 0
+#           fi
+#           # No -f and no --retry: /health answers 503 when a dependency is
+#           # degraded, its body still names the running version, and curl would
+#           # retry a 503 and concatenate the bodies.
+#           ACTUAL=$(curl -sS --max-time 20 "$HEALTH_URL" | jq -r '.version')
+#           if [ "${ACTUAL#v}" != "$TAG" ]; then
+#             echo "::error::backend reports version '$ACTUAL', expected '$TAG' ($HEALTH_URL)"
+#             exit 1
+#           fi
+#           echo "Backend is serving $ACTUAL"

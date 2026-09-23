@@ -4,6 +4,7 @@ using Pulumi.Aws.Ecs;
 using Pulumi.Aws.Ecs.Inputs;
 using Pulumi.Aws.Alb;
 using Pulumi.Aws.Alb.Inputs;
+using Pulumi.Command.Local;
 using System.Collections.Immutable;
 using Whispa.Aws.Pulumi.Configuration;
 using System.Text.Json;
@@ -65,6 +66,18 @@ public class ComputeStack : ComponentResource
         // backend falls back to its non-media audio source.
         var mediaAddress = mediaAdvertiseAddress ?? Output.Create(string.Empty);
         var mediaUdpPorts = mediaPorts ?? [];
+
+        // Backend and frontend ship in lockstep: a newer frontend calls APIs an
+        // older backend rejects. A full-ref override on one side is how they drift.
+        var backendVersion = GetVersionFromImage(config.BackendImage);
+        var frontendVersion = GetVersionFromImage(config.FrontendImage);
+        if (backendVersion != frontendVersion)
+        {
+            Log.Warn(
+                $"Backend image version '{backendVersion}' differs from frontend '{frontendVersion}'. " +
+                "Unless this skew is deliberate, remove the whispa:backendImage/whispa:frontendImage override.",
+                this);
+        }
 
         // ===================
         // Application Load Balancer
@@ -612,6 +625,8 @@ public class ComputeStack : ComponentResource
                     mediaListeners.ToArray()),
         });
 
+        var backendRollout = WaitForRollout($"{name}-backend-rollout", config, cluster, backendService, backendTaskDef);
+
         var frontendService = new Service($"{name}-frontend-service", new ServiceArgs
         {
             Name = config.ResourceName("frontend"),
@@ -646,7 +661,16 @@ public class ComputeStack : ComponentResource
                 ["Project"] = config.ProjectName,
                 ["Environment"] = config.Environment,
             },
-        }, new CustomResourceOptions { Parent = this, DependsOn = { httpsListener } });
+        }, new CustomResourceOptions
+        {
+            Parent = this,
+            // Frontend never goes live ahead of a backend that failed to roll
+            // out: a new frontend against the rolled-back backend calls APIs
+            // the old backend rejects.
+            DependsOn = { httpsListener, backendRollout },
+        });
+
+        WaitForRollout($"{name}-frontend-rollout", config, cluster, frontendService, frontendTaskDef);
 
         // Backend is accessed via ALB path-based routing, not directly on port 8000
         var apiDomain = string.IsNullOrWhiteSpace(config.ApiDomainName) ? config.DomainName : config.ApiDomainName;
@@ -654,6 +678,33 @@ public class ComputeStack : ComponentResource
         FrontendUrl = Output.Format($"https://{config.DomainName}");
 
         RegisterOutputs();
+    }
+
+    /// <summary>
+    /// Fails `pulumi up` unless the service's new task definition finishes rolling
+    /// out. The circuit breaker rolls a failed deployment back after the service
+    /// update has already succeeded, so without this a failed release reports
+    /// success (see scripts/wait-for-ecs-rollout.sh). Re-runs whenever the task
+    /// definition changes; needs the AWS CLI on the machine running Pulumi.
+    /// </summary>
+    private Command WaitForRollout(
+        string name, WhispaConfig config, Cluster cluster, Service service, TaskDefinition taskDefinition)
+    {
+        var environment = new InputMap<string>
+        {
+            ["CLUSTER"] = cluster.Name,
+            ["SERVICE"] = service.Name,
+            ["TASK_DEFINITION"] = taskDefinition.Arn,
+            ["AWS_REGION"] = config.AwsRegion,
+        };
+        if (!string.IsNullOrWhiteSpace(config.AwsProfile))
+            environment.Add("AWS_PROFILE", config.AwsProfile);
+
+        return new Command(name, new CommandArgs
+        {
+            Create = "bash ../../scripts/wait-for-ecs-rollout.sh \"$CLUSTER\" \"$SERVICE\" \"$TASK_DEFINITION\"",
+            Environment = environment,
+        }, new CustomResourceOptions { Parent = this, DependsOn = { service } });
     }
 
     /// <summary>
