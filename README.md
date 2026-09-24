@@ -69,7 +69,7 @@ version, press **Run workflow**. It runs `pulumi up` via AWS OIDC — no static 
 The workflow ships **disabled** (commented out) so it doesn't run on this template
 repo — enable it in your own repo during setup.
 
-- Workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+- Workflow: [`.github/workflows/deploy.yml.example`](.github/workflows/deploy.yml.example)
 - Setup + usage: [docs/CI-CD.md](docs/CI-CD.md)
 
 ## Documentation

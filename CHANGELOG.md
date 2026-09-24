@@ -11,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- The example deploy workflow is now `.github/workflows/deploy.yml.example`
+  (uncommented): copy it to `deploy.yml` to enable it. The commented-out
+  `deploy.yml` was an empty workflow file, which GitHub reported as a failed run
+  on every push.
+
 ## [0.0.147] - 2026-09-24
 
 ### Fixed
