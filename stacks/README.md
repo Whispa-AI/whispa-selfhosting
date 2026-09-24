@@ -5,7 +5,7 @@ Per-environment Pulumi config for CI deploys.
 The Pulumi project reads `infra/pulumi/Pulumi.<stack>.yaml`, but those files are
 gitignored (so the public template repo never carries real config). For automated
 deploys we keep the canonical copy here instead — one file per environment — and
-the [`Deploy Whispa`](../.github/workflows/deploy.yml) workflow stages it into the
+the [`Deploy Whispa`](../.github/workflows/deploy.yml.example) workflow stages it into the
 Pulumi project at deploy time:
 
 ```

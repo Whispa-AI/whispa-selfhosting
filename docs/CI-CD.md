@@ -15,7 +15,7 @@ You: Actions ▸ Deploy Whispa ▸ Run workflow (stack=dev, version=0.0.89)
   checkout ─► stage stacks/dev.yaml ─► AWS OIDC role ─► pulumi up (imageTag=0.0.89)
 ```
 
-- Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
+- Workflow: [`.github/workflows/deploy.yml.example`](../.github/workflows/deploy.yml.example)
 - Stack config: [`stacks/`](../stacks/) (see [stacks/README.md](../stacks/README.md))
 - OIDC setup script: [`scripts/setup-github-oidc.sh`](../scripts/setup-github-oidc.sh)
 
@@ -132,10 +132,9 @@ Copy the final `Pulumi.dev.yaml` (now carrying the `encryptedkey:` and any
 
 ### 6. Enable the workflow
 
-The workflow ships **commented out** so it doesn't run on the upstream repo.
-In your repo, enable it by stripping the leading `# ` from the body of
-`.github/workflows/deploy.yml` (everything under the header), then commit. After
-that it appears under the **Actions** tab as **Deploy Whispa**.
+The workflow ships as `.github/workflows/deploy.yml.example` so it doesn't run on
+the upstream repo. In your repo, copy it to `.github/workflows/deploy.yml` and
+commit. After that it appears under the **Actions** tab as **Deploy Whispa**.
 
 ---
 
