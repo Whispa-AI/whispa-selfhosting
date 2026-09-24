@@ -692,25 +692,24 @@ public class ComputeStack : ComponentResource
     /// Fails `pulumi up` unless the service's new task definition finishes rolling
     /// out. The circuit breaker rolls a failed deployment back after the service
     /// update has already succeeded, so without this a failed release reports
-    /// success (see scripts/wait-for-ecs-rollout.sh). Re-runs whenever the task
-    /// definition changes; needs the AWS CLI on the machine running Pulumi.
+    /// success (see infra/rollout-gate). Re-runs whenever the task definition
+    /// changes. A .NET tool, so it runs wherever this program does (including
+    /// Windows CI) with no shell or AWS CLI; it uses the same AWS credentials.
     /// </summary>
     private Command WaitForRollout(
         string name, WhispaConfig config, Cluster cluster, Service service, TaskDefinition taskDefinition)
     {
-        var environment = new InputMap<string>
-        {
-            ["CLUSTER"] = cluster.Name,
-            ["SERVICE"] = service.Name,
-            ["TASK_DEFINITION"] = taskDefinition.Arn,
-            ["AWS_REGION"] = config.AwsRegion,
-        };
+        var environment = new InputMap<string> { ["AWS_REGION"] = config.AwsRegion };
         if (!string.IsNullOrWhiteSpace(config.AwsProfile))
             environment.Add("AWS_PROFILE", config.AwsProfile);
 
         return new Command(name, new CommandArgs
         {
-            Create = "bash ../../scripts/wait-for-ecs-rollout.sh \"$CLUSTER\" \"$SERVICE\" \"$TASK_DEFINITION\"",
+            // Arguments rather than environment references: the command runs
+            // under sh or cmd.exe depending on the OS, and ARNs and names have
+            // no spaces to quote.
+            Create = Output.Format(
+                $"dotnet run --project ../rollout-gate -c Release -v q -- {cluster.Name} {service.Name} {taskDefinition.Arn}"),
             Environment = environment,
         }, new CustomResourceOptions { Parent = this, DependsOn = { service } });
     }

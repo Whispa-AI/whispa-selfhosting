@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../pulumi/Whispa.Aws.Pulumi.csproj" />
+    <ProjectReference Include="../rollout-gate/RolloutGate.csproj" />
   </ItemGroup>
 
 </Project>
