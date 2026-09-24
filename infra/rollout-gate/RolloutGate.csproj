@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pin versions to avoid breaking changes from wildcard updates -->
+    <PackageReference Include="AWSSDK.ECS" Version="4.0.105.1" />
+  </ItemGroup>
+
+</Project>

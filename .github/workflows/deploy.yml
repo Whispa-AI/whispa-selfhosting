@@ -154,7 +154,7 @@
 #             ${{ steps.ver.outputs.image_tag && format('{{ "whispa:imageTag": {{ "value": "{0}" }} }}', steps.ver.outputs.image_tag) || '' }}
 #
 #       - name: Verify the backend serves the deployed version
-#         # Pulumi already fails if a service rolls back (scripts/wait-for-ecs-rollout.sh);
+#         # Pulumi already fails if a service rolls back (infra/rollout-gate);
 #         # this checks what the live backend reports, which also catches a
 #         # whispa:backendImage override pinning it to another release.
 #         env:

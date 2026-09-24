@@ -58,8 +58,7 @@ dotnet --version
 
 ### 3. AWS CLI
 
-Install and configure the AWS CLI. `pulumi up` also uses it (via `bash`) to confirm
-each ECS rollout completed; on Windows, run Pulumi from WSL or Git Bash.
+Install and configure the AWS CLI:
 
 **macOS:**
 ```bash

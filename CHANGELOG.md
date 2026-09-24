@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- The rollout check added in 0.0.146 now runs on Windows. It was a bash script
+  calling the AWS CLI, so `pulumi up` failed on Windows machines and CI runners
+  ("'bash' is not recognized"). It is now a small .NET tool (`infra/rollout-gate`)
+  run with `dotnet`, which Pulumi already requires, using the AWS SDK with the same
+  credentials: no bash or AWS CLI needed.
+
 ## [0.0.146] - 2026-09-23
 
 ### Fixed
