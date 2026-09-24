@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.147] - 2026-09-24
+
 ### Fixed
 - The rollout check added in 0.0.146 now runs on Windows. It was a bash script
   calling the AWS CLI, so `pulumi up` failed on Windows machines and CI runners
