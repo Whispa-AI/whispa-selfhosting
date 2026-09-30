@@ -483,9 +483,42 @@ public class WhispaConfig
         _config.GetObject<string[]>("mediaIngressAllowedCidrs") ?? [];
 
     /// <summary>
-    /// Maximum media ports. ECS permits at most five target groups per service
-    /// and one is already used by the ALB, so more than four would fail at
-    /// deploy time rather than at configuration time.
+    /// Also forward the autonomous voice agent's own UDP ports (default: false).
+    /// Requires <c>mediaIngressEnabled</c>.
+    ///
+    /// The TCN autonomous agent is itself a SIP client of the provider: it
+    /// signals on one port and exchanges RTP on another, both advertised at the
+    /// media address. Those ports must stay out of <c>mediaIngressPorts</c>, which
+    /// the backend reserves for monitoring audio and rejects as agent ports, but
+    /// they share its listener budget.
+    /// </summary>
+    public bool MediaIngressVoiceAgentEnabled =>
+        _config.GetBoolean("mediaIngressVoiceAgentEnabled") ?? false;
+
+    /// <summary>The voice agent's SIP signalling port (default: 5062).</summary>
+    public int MediaIngressVoiceAgentSipPort =>
+        _config.GetInt32("mediaIngressVoiceAgentSipPort") ?? 5062;
+
+    /// <summary>The voice agent's RTP port (default: 16000).</summary>
+    public int MediaIngressVoiceAgentRtpPort =>
+        _config.GetInt32("mediaIngressVoiceAgentRtpPort") ?? 16000;
+
+    /// <summary>The voice agent's forwarded ports, SIP then RTP; none when off.</summary>
+    public int[] MediaIngressVoiceAgentPorts => MediaIngressVoiceAgentEnabled
+        ? [MediaIngressVoiceAgentSipPort, MediaIngressVoiceAgentRtpPort]
+        : [];
+
+    /// <summary>
+    /// Every UDP port the media load balancer forwards to the backend task:
+    /// the monitoring ports, then the voice agent's.
+    /// </summary>
+    public int[] MediaIngressForwardedPorts =>
+        [.. MediaIngressPorts, .. MediaIngressVoiceAgentPorts];
+
+    /// <summary>
+    /// Maximum forwarded media ports. ECS permits at most five target groups per
+    /// service and one is already used by the ALB, so more than four would fail
+    /// at deploy time rather than at configuration time.
     /// </summary>
     public const int MaxMediaIngressPorts = 4;
 
@@ -497,40 +530,16 @@ public class WhispaConfig
     {
         if (!MediaIngressEnabled)
         {
+            if (MediaIngressVoiceAgentEnabled)
+            {
+                throw new InvalidOperationException(
+                    "mediaIngressVoiceAgentEnabled requires mediaIngressEnabled; the "
+                    + "voice agent's ports are forwarded by the media load balancer.");
+            }
             return;
         }
 
-        var ports = MediaIngressPorts;
-        if (ports.Length == 0)
-        {
-            throw new InvalidOperationException(
-                "mediaIngressEnabled requires mediaIngressPorts; an empty list would "
-                + "create a paid load balancer that forwards nothing.");
-        }
-
-        if (ports.Length > MaxMediaIngressPorts)
-        {
-            throw new InvalidOperationException(
-                $"mediaIngressPorts allows at most {MaxMediaIngressPorts} ports "
-                + "(ECS permits five target groups per service and the load balancer "
-                + $"already uses one); got {ports.Length}.");
-        }
-
-        if (ports.Distinct().Count() != ports.Length)
-        {
-            throw new InvalidOperationException(
-                "mediaIngressPorts must be distinct; duplicates would collide as "
-                + "resource names and listeners.");
-        }
-
-        foreach (var port in ports)
-        {
-            if (port is < 1 or > 65535)
-            {
-                throw new InvalidOperationException(
-                    $"mediaIngressPorts contains an invalid port: {port}.");
-            }
-        }
+        ValidateMediaPorts(MediaIngressPorts, MediaIngressVoiceAgentPorts);
 
         // Fail closed. An empty list previously meant 0.0.0.0/0, which exposed an
         // unauthenticated UDP parser to the internet from a single boolean — too
@@ -555,6 +564,48 @@ public class WhispaConfig
             {
                 throw new InvalidOperationException(
                     $"mediaIngressAllowedCidrs contains an invalid CIDR: {cidr}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reject forwarded ports that could not all be deployed: too many for the
+    /// service's target group budget, duplicated, or out of range.
+    /// </summary>
+    public static void ValidateMediaPorts(int[] monitoringPorts, int[] voiceAgentPorts)
+    {
+        if (monitoringPorts.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressEnabled requires mediaIngressPorts; an empty list would "
+                + "create a paid load balancer that forwards nothing.");
+        }
+
+        int[] ports = [.. monitoringPorts, .. voiceAgentPorts];
+        if (ports.Length > MaxMediaIngressPorts)
+        {
+            var agent = voiceAgentPorts.Length > 0
+                ? $" including the voice agent's {voiceAgentPorts.Length}"
+                : "";
+            throw new InvalidOperationException(
+                $"At most {MaxMediaIngressPorts} media ports can be forwarded "
+                + "(ECS permits five target groups per service and the load balancer "
+                + $"already uses one); got {ports.Length}{agent}.");
+        }
+
+        if (ports.Distinct().Count() != ports.Length)
+        {
+            throw new InvalidOperationException(
+                "mediaIngressPorts and the voice agent's ports must be distinct; "
+                + "duplicates would collide as resource names and listeners.");
+        }
+
+        foreach (var port in ports)
+        {
+            if (port is < 1 or > 65535)
+            {
+                throw new InvalidOperationException(
+                    $"Media ports contain an invalid port: {port}.");
             }
         }
     }

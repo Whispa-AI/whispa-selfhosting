@@ -319,7 +319,7 @@ public class NetworkingStack : ComponentResource
             {
                 VpcId = vpc.Id,
                 Description = "Security group for the inbound-media load balancer",
-                Ingress = config.MediaIngressPorts.Select(port => new SecurityGroupIngressArgs
+                Ingress = config.MediaIngressForwardedPorts.Select(port => new SecurityGroupIngressArgs
                 {
                     Protocol = "udp",
                     FromPort = port,
@@ -383,7 +383,7 @@ public class NetworkingStack : ComponentResource
             // Missing this rule leaves every target unhealthy; since a Network
             // Load Balancer fails open when no target is healthy, media keeps
             // flowing and the breakage is invisible.
-            foreach (var port in config.MediaIngressPorts)
+            foreach (var port in config.MediaIngressForwardedPorts)
             {
                 ecsIngress.Add(new SecurityGroupIngressArgs
                 {

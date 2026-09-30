@@ -434,12 +434,28 @@ public class ComputeStack : ComponentResource
                         ? new[]
                         {
                             new { name = "TCN_MEDIA_ADVERTISE_ADDRESS", value = mediaAdvertise },
+                            // Monitoring ports only: the backend rejects voice
+                            // agent ports that appear in this list.
                             new
                             {
                                 name = "TCN_MEDIA_RTP_PORTS",
-                                value = string.Join(",", mediaUdpPorts),
+                                value = string.Join(",", config.MediaIngressPorts),
                             },
-                        }
+                        }.Concat(config.MediaIngressVoiceAgentEnabled
+                            ? new[]
+                            {
+                                new
+                                {
+                                    name = "TCN_AGENT_SIP_PORT",
+                                    value = config.MediaIngressVoiceAgentSipPort.ToString(),
+                                },
+                                new
+                                {
+                                    name = "TCN_AGENT_RTP_PORT",
+                                    value = config.MediaIngressVoiceAgentRtpPort.ToString(),
+                                },
+                            }
+                            : [])
                         : [])
                     .Concat(config.ExtraEnv.Select(kv => new { name = kv.Key, value = kv.Value })).ToArray(),
                     secrets = BuildSecretsList(

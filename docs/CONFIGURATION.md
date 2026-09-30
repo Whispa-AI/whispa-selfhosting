@@ -345,8 +345,11 @@ pulumi up
 | Key | Default | Description |
 |-----|---------|-------------|
 | `whispa:mediaIngressEnabled` | `false` | Deploy the inbound UDP media path (NLB + listeners + target groups) |
-| `whispa:mediaIngressPorts` | `[42010, 42011]` | UDP ports forwarded to the backend task, at most four. One listener and target group per port (ECS permits five per service, and the ALB uses one) |
+| `whispa:mediaIngressPorts` | `[42010, 42011]` | Monitoring UDP ports forwarded to the backend task. One listener and target group per port (ECS permits five per service, and the ALB uses one), shared with the voice agent's ports below |
 | `whispa:mediaIngressAllowedCidrs` | (none) | **Required.** Source ranges allowed to send media — your provider's media ranges, or `0.0.0.0/0` to deliberately accept media from anywhere |
+| `whispa:mediaIngressVoiceAgentEnabled` | `false` | Also forward the autonomous voice agent's SIP and RTP ports (below) |
+| `whispa:mediaIngressVoiceAgentSipPort` | `5062` | The voice agent's SIP signalling port |
+| `whispa:mediaIngressVoiceAgentRtpPort` | `16000` | The voice agent's RTP port |
 
 After `pulumi up`, the `mediaAdvertiseAddress` stack output holds the static
 address the provider must send media to:
@@ -380,6 +383,26 @@ container as `TCN_MEDIA_ADVERTISE_ADDRESS`, along with `TCN_MEDIA_RTP_PORTS`.
 - Enabling this without `mediaIngressAllowedCidrs` is rejected at preview time
   rather than silently opening the ports to the internet.
 - Replacing a task (any deploy) interrupts media for calls in flight.
+
+#### Autonomous voice agent
+
+The TCN autonomous voice agent is itself a SIP client of the provider, with its
+own signalling and RTP ports advertised at the same address. Enable
+`mediaIngressVoiceAgentEnabled` to forward them; the backend receives them as
+`TCN_AGENT_SIP_PORT` and `TCN_AGENT_RTP_PORT`. They are kept out of
+`TCN_MEDIA_RTP_PORTS`, which carries monitoring audio only.
+
+```bash
+pulumi config set whispa:mediaIngressVoiceAgentEnabled true
+```
+
+- The two agent ports count against the same four-port budget, so they fit
+  beside the default two monitoring ports. That is one agent session.
+- `mediaIngressAllowedCidrs` must also cover the provider's SIP signalling
+  addresses, not only its media servers.
+- The agent starts its SIP dialog outbound, through the NAT gateway, while
+  advertising the load balancer's address for the provider's replies. Confirm
+  two-way audio with a test call after the first deploy.
 
 ## Environment Variables
 

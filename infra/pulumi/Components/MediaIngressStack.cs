@@ -41,7 +41,9 @@ namespace Whispa.Aws.Pulumi.Components;
 /// 3. <b>A fixed, small set of ports.</b> Only pre-registered ports are
 ///    forwarded, so the application shares one port pair across all concurrent
 ///    calls and distinguishes them by source address (the load balancer
-///    preserves it). Two listeners therefore serve any number of calls.
+///    preserves it). Two listeners therefore serve any number of calls. An
+///    autonomous voice agent adds its own SIP and RTP ports to the same set
+///    (see <see cref="WhispaConfig.MediaIngressVoiceAgentEnabled"/>).
 ///
 /// 4. <b>Health checks are HTTP against the application's own endpoint.</b> A
 ///    UDP target group cannot health-check over UDP. Note the health check
@@ -62,7 +64,10 @@ public class MediaIngressStack : ComponentResource
     /// <summary>Target group per media port, in the configured port order.</summary>
     public Output<ImmutableArray<string>> TargetGroupArns { get; }
 
-    /// <summary>The UDP ports forwarded to the task, in order.</summary>
+    /// <summary>
+    /// The UDP ports forwarded to the task, in order: monitoring ports, then the
+    /// voice agent's.
+    /// </summary>
     public int[] Ports { get; }
 
     /// <summary>
@@ -83,7 +88,7 @@ public class MediaIngressStack : ComponentResource
         ComponentResourceOptions? options = null)
         : base("whispa:index:MediaIngressStack", name, options)
     {
-        Ports = config.MediaIngressPorts;
+        Ports = config.MediaIngressForwardedPorts;
         var allowedCidrs = config.MediaIngressAllowedCidrs;
 
 

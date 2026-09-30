@@ -11,6 +11,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `mediaIngressVoiceAgentEnabled` forwards the TCN autonomous voice agent's own
+  SIP and RTP ports (`mediaIngressVoiceAgentSipPort`, default 5062, and
+  `mediaIngressVoiceAgentRtpPort`, default 16000) through the media load balancer
+  and passes them to the backend as `TCN_AGENT_SIP_PORT` and `TCN_AGENT_RTP_PORT`.
+  Until now every forwarded port was also published as a monitoring port, which
+  the backend rejects for the agent, so the agent could not run on this stack.
+  The agent's ports share the four-port budget with `mediaIngressPorts`.
+
 ## [0.0.148] - 2026-09-28
 
 ## [0.0.147] - 2026-09-24
