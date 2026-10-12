@@ -212,8 +212,9 @@ public class WhispaConfig
     /// <summary>
     /// Secret env passthrough: a map of ENV_VAR_NAME =&gt; secret value. Values are stored in the
     /// api-keys Secrets Manager secret and injected via the container's `secrets` block (never in
-    /// plaintext). Set per key with:
-    ///   pulumi config set --secret --path 'extraSecrets.CARTESIA_API_KEY' YOUR_KEY
+    /// plaintext). Set per key with the `whispa:` prefix — without it Pulumi files the key under
+    /// the project's name (`whispa-aws:extraSecrets`), which is not read here:
+    ///   pulumi config set --secret --path 'whispa:extraSecrets.CARTESIA_API_KEY' YOUR_KEY
     /// </summary>
     public Output<Dictionary<string, string>> ExtraSecrets =>
         _config.GetSecretObject<Dictionary<string, string>>("extraSecrets")
