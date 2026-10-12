@@ -199,8 +199,10 @@ config:
   #   CARTESIA_VOICE_ID: "a0e99841-..."
   #
   # Secret values -> extraSecrets (stored in Secrets Manager, injected via `secrets`).
-  # Set each key on the CLI so the value is encrypted — never paste a key here:
-  #   pulumi config set --secret --path 'extraSecrets.CARTESIA_API_KEY' sk-cartesia-...
+  # Set each key on the CLI so the value is encrypted — never paste a key here. Keep
+  # the `whispa:` prefix: without it Pulumi files the key under the project's name
+  # (`whispa-aws:extraSecrets`), which nothing reads, and the container never gets it.
+  #   pulumi config set --secret --path 'whispa:extraSecrets.CARTESIA_API_KEY' sk-cartesia-...
   #
   # Once a var is permanent, promote it to a typed WhispaConfig property (defaults +
   # validation + discoverability). extraEnv/extraSecrets are the fast lane, not the home.
