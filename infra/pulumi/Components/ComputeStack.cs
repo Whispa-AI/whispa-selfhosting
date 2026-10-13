@@ -681,8 +681,11 @@ public class ComputeStack : ComponentResource
             Parent = this,
             // Frontend never goes live ahead of a backend that failed to roll
             // out: a new frontend against the rolled-back backend calls APIs
-            // the old backend rejects.
-            DependsOn = { httpsListener, backendRollout },
+            // the old backend rejects. whispa:parallelRollouts trades that
+            // guarantee for a deploy that takes one rollout instead of two.
+            DependsOn = config.ParallelRollouts
+                ? new InputList<Resource> { httpsListener }
+                : new InputList<Resource> { httpsListener, backendRollout },
         });
 
         WaitForRollout($"{name}-frontend-rollout", config, cluster, frontendService, frontendTaskDef);
