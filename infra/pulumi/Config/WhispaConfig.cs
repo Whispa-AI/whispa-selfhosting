@@ -117,6 +117,14 @@ public class WhispaConfig
     /// <summary>Number of task replicas (default: 1 for dev, use 2+ for production)</summary>
     public int DesiredCount => _config.GetInt32("desiredCount") ?? 1;
 
+    /// <summary>
+    /// Roll the frontend out alongside the backend instead of after it
+    /// (default: false). Roughly halves deploy time, but a backend rollout
+    /// that fails then leaves the new frontend running against the previous
+    /// backend. For test environments; keep off in production.
+    /// </summary>
+    public bool ParallelRollouts => _config.GetBoolean("parallelRollouts") ?? false;
+
     // ===================
     // Email Configuration (AWS SES)
     // ===================

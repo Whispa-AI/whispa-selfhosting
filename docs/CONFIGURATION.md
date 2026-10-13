@@ -72,6 +72,7 @@ The deployment always creates 2 AZs, a NAT Gateway, and public/private subnets.
 | `whispa:frontendCpu` | `256` | Frontend CPU units |
 | `whispa:frontendMemory` | `512` | Frontend memory in MB |
 | `whispa:desiredCount` | `1` | Number of task replicas (applies to both backend and frontend) |
+| `whispa:parallelRollouts` | `false` | Roll the frontend out alongside the backend instead of after it. Roughly halves deploy time; if the backend rollout fails, the new frontend is left running against the previous backend. For test environments only |
 
 ## App Version (Container Images)
 

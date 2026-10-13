@@ -133,6 +133,7 @@ config:
   # whispa:frontendCpu: "256"        # 0.25 vCPU
   # whispa:frontendMemory: "512"     # 512 MB
   # whispa:desiredCount: "1"         # Task replicas (use 2+ for production HA)
+  # whispa:parallelRollouts: "true" # Roll frontend alongside backend: faster deploys, test environments only
 
   # ===================
   # Optional - App Version
