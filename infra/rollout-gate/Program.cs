@@ -14,7 +14,7 @@
 // Usage: dotnet run --project infra/rollout-gate -- <cluster> <service> <task-definition-arn>
 // Env:   AWS_REGION / AWS_PROFILE as for any AWS SDK
 //        ROLLOUT_TIMEOUT_SECONDS  (default 2400: boot + a full live-call drain)
-//        ROLLOUT_POLL_SECONDS     (default 15)
+//        ROLLOUT_POLL_SECONDS     (default 5)
 
 using Amazon.ECS;
 using Amazon.ECS.Model;
@@ -29,7 +29,7 @@ if (args.Length != 3)
 
 var (cluster, service, expected) = (args[0], args[1], args[2]);
 var timeout = TimeSpan.FromSeconds(ReadSeconds("ROLLOUT_TIMEOUT_SECONDS", 2400));
-var poll = TimeSpan.FromSeconds(ReadSeconds("ROLLOUT_POLL_SECONDS", 15));
+var poll = TimeSpan.FromSeconds(ReadSeconds("ROLLOUT_POLL_SECONDS", 5));
 
 using var ecs = new AmazonECSClient();
 Console.WriteLine($"Waiting for {service} to roll out {RolloutDecision.ShortName(expected)} (timeout {timeout.TotalSeconds:0}s)");

@@ -156,10 +156,12 @@ public class MediaIngressStack : ComponentResource
                     Port = healthCheckPort.ToString(),
                     Path = "/health",
                     Matcher = "200",
-                    Interval = 30,
-                    Timeout = 10,
+                    // Paced like the backend's HTTP target group: ECS waits
+                    // for every group, so a slower one here sets the rollout time.
+                    Interval = 10,
+                    Timeout = 5,
                     HealthyThreshold = 2,
-                    UnhealthyThreshold = 3,
+                    UnhealthyThreshold = 9,
                 },
                 Tags = new InputMap<string>
                 {

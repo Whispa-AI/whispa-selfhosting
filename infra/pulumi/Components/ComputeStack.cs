@@ -126,13 +126,18 @@ public class ComputeStack : ComponentResource
                 Path = "/health",
                 Protocol = "HTTP",
                 Port = "8000",
+                // A 10s interval lets a new task pass its two checks in ~20s
+                // rather than up to a minute, the longest wait in a rollout.
+                // Nine failures keep the 90s a task had before ECS replaces it.
                 HealthyThreshold = 2,
-                UnhealthyThreshold = 3,
+                UnhealthyThreshold = 9,
                 Timeout = 5,
-                Interval = 30,
+                Interval = 10,
                 Matcher = "200",
             },
-            DeregistrationDelay = 30,  // Faster deployments
+            // Long API requests (imports, exports) get this long to finish
+            // on the old task.
+            DeregistrationDelay = 30,
             Tags = new InputMap<string>
             {
                 ["Name"] = config.ResourceName("backend-tg"),
@@ -154,12 +159,14 @@ public class ComputeStack : ComponentResource
                 Protocol = "HTTP",
                 Port = "3000",
                 HealthyThreshold = 2,
-                UnhealthyThreshold = 3,
+                UnhealthyThreshold = 9,
                 Timeout = 5,
-                Interval = 30,
+                Interval = 10,
                 Matcher = "200",
             },
-            DeregistrationDelay = 30,
+            // Page and asset requests are short, so the old task need not
+            // linger the 30s the backend's gets.
+            DeregistrationDelay = 10,
             Tags = new InputMap<string>
             {
                 ["Name"] = config.ResourceName("frontend-tg"),
@@ -469,9 +476,11 @@ public class ComputeStack : ComponentResource
                     healthCheck = new
                     {
                         command = new[] { "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" },
-                        interval = 30,
+                        // Same pacing as the target group check: first
+                        // pass ~10s after start, 90s of failures to unhealthy.
+                        interval = 10,
                         timeout = 5,
-                        retries = 3,
+                        retries = 9,
                         startPeriod = 60,
                     },
                 },
