@@ -124,6 +124,14 @@ config:
   # whispa:dbBackupRetentionDays: "7"       # Backup retention
 
   # ===================
+  # Optional - Audio Replica
+  # ===================
+
+  # Replicate call recordings to a bucket in a second region (off by default).
+  # Only objects written after this is turned on are copied.
+  # whispa:audioReplicaRegion: ap-southeast-4
+
+  # ===================
   # Optional - ECS Compute Sizing
   # ===================
 

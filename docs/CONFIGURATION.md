@@ -114,9 +114,14 @@ S3 bucket is always created with:
 - Versioning enabled
 - Server-side encryption (AES-256)
 - Public access blocked
-- Lifecycle rules: move to IA after 30 days, Glacier after 90 days
+- HTTPS only: a bucket policy denies any request made over plain HTTP
+- Lifecycle rules: move to IA after 30 days, Glacier after 90 days, delete noncurrent versions after 30 days
 
 These settings are not currently configurable via Pulumi config.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:audioReplicaRegion` | (none) | Replicate the audio bucket to a bucket in this region (e.g. `ap-southeast-4`). Must differ from `aws:region`. The replica gets the same settings as above, and objects land in Infrequent Access. Deletes replicate too, so the replica keeps recordings no longer than the source does. Only objects written after you turn this on are copied |
 
 ## Speech-to-Text Configuration
 
