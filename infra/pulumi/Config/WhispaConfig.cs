@@ -582,6 +582,18 @@ public class WhispaConfig
     /// <summary>Environment name used for resource naming (default: derived from stack name)</summary>
     public string Environment => _config.Get("environment") ?? Deployment.Instance.StackName;
 
+    /// <summary>Whether this is a production environment (see <see cref="IsProductionEnvironment"/>)</summary>
+    public bool IsProduction => IsProductionEnvironment(Environment);
+
+    /// <summary>
+    /// An environment is production when its name ends in "prod": "prod" itself
+    /// and prefixed names like "acme-prod". The single definition every
+    /// production-only setting uses; an equality check against "prod" misses
+    /// the prefixed names.
+    /// </summary>
+    public static bool IsProductionEnvironment(string environment) =>
+        environment.EndsWith("prod", StringComparison.Ordinal);
+
     /// <summary>Project name prefix for resources (default: whispa)</summary>
     public string ProjectName => _config.Get("projectName") ?? "whispa";
 

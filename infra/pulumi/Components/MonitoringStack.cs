@@ -39,7 +39,7 @@ public class MonitoringStack : ComponentResource
         : base("whispa:monitoring:MonitoringStack", name, options)
     {
         // Retention period based on environment
-        var retentionDays = config.Environment == "prod" ? 30 : 7;
+        var retentionDays = config.IsProduction ? 30 : 7;
 
         // Backend log group
         var backendLogGroup = new LogGroup($"{name}-backend-logs", new LogGroupArgs
