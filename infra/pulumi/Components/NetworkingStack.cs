@@ -1,7 +1,10 @@
 using Pulumi;
+using Pulumi.Aws.CloudWatch;
 using Pulumi.Aws.Ec2;
 using Pulumi.Aws.Ec2.Inputs;
+using Pulumi.Aws.Iam;
 using System.Collections.Immutable;
+using System.Text.Json;
 using Whispa.Aws.Pulumi.Configuration;
 
 namespace Whispa.Aws.Pulumi.Components;
@@ -14,6 +17,7 @@ namespace Whispa.Aws.Pulumi.Components;
 /// - Internet Gateway
 /// - NAT Gateway (for private subnet outbound access)
 /// - Route tables and associations
+/// - VPC flow logs to CloudWatch Logs, kept for flowLogRetentionDays
 ///
 /// Note: Subnet CIDRs are derived from the VPC CIDR's second octet base.
 /// Default VPC CIDR 10.0.0.0/16 creates subnets:
@@ -106,6 +110,8 @@ public class NetworkingStack : ComponentResource
         }, new CustomResourceOptions { Parent = this });
 
         VpcId = vpc.Id;
+
+        ConfigureFlowLogs(name, config, vpc);
 
         // Create Internet Gateway
         var igw = new InternetGateway($"{name}-igw", new InternetGatewayArgs
@@ -466,4 +472,102 @@ public class NetworkingStack : ComponentResource
 
         RegisterOutputs();
     }
+
+    /// <summary>
+    /// Records every accepted and rejected connection in the VPC to CloudWatch
+    /// Logs, for investigating suspicious traffic after the fact.
+    /// </summary>
+    private void ConfigureFlowLogs(string name, WhispaConfig config, Vpc vpc)
+    {
+        var logGroup = new LogGroup($"{name}-flow-logs", new LogGroupArgs
+        {
+            Name = $"/vpc/{config.ProjectName}/{config.Environment}/flow-logs",
+            RetentionInDays = config.FlowLogRetentionDays,
+            Tags = new InputMap<string>
+            {
+                ["Name"] = config.ResourceName("flow-logs"),
+                ["Project"] = config.ProjectName,
+                ["Environment"] = config.Environment,
+            },
+        }, new CustomResourceOptions { Parent = this });
+
+        var accountId = global::Pulumi.Aws.GetCallerIdentity.Invoke().Apply(id => id.AccountId);
+
+        var role = new Role($"{name}-flow-logs-role", new RoleArgs
+        {
+            Name = config.ResourceName("vpc-flow-logs"),
+            AssumeRolePolicy = accountId.Apply(FlowLogsAssumeRolePolicy),
+            Tags = new InputMap<string>
+            {
+                ["Name"] = config.ResourceName("vpc-flow-logs"),
+                ["Project"] = config.ProjectName,
+                ["Environment"] = config.Environment,
+            },
+        }, new CustomResourceOptions { Parent = this });
+
+        new RolePolicy($"{name}-flow-logs-policy", new RolePolicyArgs
+        {
+            Role = role.Name,
+            Policy = logGroup.Arn.Apply(arn => JsonSerializer.Serialize(new
+            {
+                Version = "2012-10-17",
+                Statement = new[]
+                {
+                    new
+                    {
+                        Sid = "WriteFlowLogs",
+                        Effect = "Allow",
+                        Action = new[]
+                        {
+                            "logs:CreateLogStream", "logs:PutLogEvents",
+                            "logs:DescribeLogGroups", "logs:DescribeLogStreams",
+                        },
+                        Resource = new[] { arn, $"{arn}:*" },
+                    },
+                },
+            })),
+        }, new CustomResourceOptions { Parent = this });
+
+        new FlowLog($"{name}-flow-log", new FlowLogArgs
+        {
+            VpcId = vpc.Id,
+            TrafficType = "ALL",
+            LogDestinationType = "cloud-watch-logs",
+            LogDestination = logGroup.Arn,
+            IamRoleArn = role.Arn,
+            // Seconds; the longer of the two intervals AWS offers, which keeps
+            // the log volume down.
+            MaxAggregationInterval = 600,
+            Tags = new InputMap<string>
+            {
+                ["Name"] = config.ResourceName("flow-log"),
+                ["Project"] = config.ProjectName,
+                ["Environment"] = config.Environment,
+            },
+        }, new CustomResourceOptions { Parent = this });
+    }
+
+    /// <summary>
+    /// Trust policy letting the VPC Flow Logs service deliver logs for this
+    /// account only; aws:SourceAccount stops another account's flow logs from
+    /// using the role (the confused-deputy problem).
+    /// </summary>
+    public static string FlowLogsAssumeRolePolicy(string accountId) =>
+        JsonSerializer.Serialize(new
+        {
+            Version = "2012-10-17",
+            Statement = new[]
+            {
+                new
+                {
+                    Effect = "Allow",
+                    Principal = new { Service = "vpc-flow-logs.amazonaws.com" },
+                    Action = "sts:AssumeRole",
+                    Condition = new
+                    {
+                        StringEquals = new Dictionary<string, string> { ["aws:SourceAccount"] = accountId },
+                    },
+                },
+            },
+        });
 }

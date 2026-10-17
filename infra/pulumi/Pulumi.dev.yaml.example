@@ -264,3 +264,7 @@ config:
   # whispa:langfusePublicKey: pk-lf-...
   # whispa:langfuseHost: https://cloud.langfuse.com
   # Set with: pulumi config set --secret whispa:langfuseSecretKey YOUR_KEY
+
+  # Log retention in days (must be a value CloudWatch Logs accepts, e.g. 30, 90, 365)
+  # whispa:logRetentionDays: "30"        # Backend and frontend logs
+  # whispa:flowLogRetentionDays: "365"   # VPC flow logs (connection metadata only)
