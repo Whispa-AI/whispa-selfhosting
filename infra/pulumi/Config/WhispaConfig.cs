@@ -82,6 +82,16 @@ public class WhispaConfig
     public string[] RdsClusterIdentifiers => _config.GetObject<string[]>("rdsClusterIdentifiers") ?? [];
 
     // ===================
+    // Storage Configuration
+    // ===================
+
+    /// <summary>
+    /// Region to replicate the audio bucket to, e.g. "ap-southeast-4" (optional).
+    /// Unset means no replica. Must differ from aws:region.
+    /// </summary>
+    public string? AudioReplicaRegion => _config.Get("audioReplicaRegion");
+
+    // ===================
     // ECS Configuration
     // ===================
 
