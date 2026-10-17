@@ -9,7 +9,8 @@ namespace Whispa.Aws.Pulumi.Components;
 
 /// <summary>
 /// Creates CloudWatch monitoring infrastructure:
-/// - Log groups for ECS containers, kept for logRetentionDays
+/// - Log groups for ECS containers
+/// - Log retention policies
 /// - The alert topic (optional) shared by RDS alarms, load balancer alarms and deployment alerts
 /// - Optional RDS I/O alarms
 /// </summary>
