@@ -53,6 +53,7 @@ Control how AWS resources are named:
 | `whispa:vpcCidr` | `10.0.0.0/16` | VPC CIDR block (must be /20 or larger) |
 
 The deployment always creates 2 AZs, a NAT Gateway, and public/private subnets.
+VPC flow logs (all traffic) go to the CloudWatch log group `/vpc/{projectName}/{environment}/flow-logs`; see [Log retention](#log-retention).
 
 ## Database (RDS)
 
@@ -253,6 +254,15 @@ role automatically — no API key needed.
 | `whispa:sentryDsn` | Sentry error tracking DSN | No |
 
 ## Observability
+
+### Log retention
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `whispa:logRetentionDays` | `30` | Days to keep backend and frontend logs. Application logs can contain call and debtor details, so keep them no longer than you need |
+| `whispa:flowLogRetentionDays` | `365` | Days to keep VPC flow logs. They record connection metadata only (addresses, ports, bytes), no application data |
+
+Both must be a period CloudWatch Logs accepts: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288 or 3653.
 
 ### Langfuse (LLM Observability)
 

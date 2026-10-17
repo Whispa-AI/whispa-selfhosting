@@ -396,6 +396,35 @@ public class WhispaConfig
     /// <summary>Langfuse host URL (optional, for self-hosted Langfuse)</summary>
     public string? LangfuseHost => _config.Get("langfuseHost");
 
+    /// <summary>
+    /// Days to keep backend and frontend logs (default: 30). Application logs
+    /// can contain call and debtor details, so keep them no longer than needed.
+    /// </summary>
+    public int LogRetentionDays => RetentionDays("logRetentionDays", 30);
+
+    /// <summary>
+    /// Days to keep VPC flow logs (default: 365). They record connection
+    /// metadata only (addresses, ports, bytes), no application data.
+    /// </summary>
+    public int FlowLogRetentionDays => RetentionDays("flowLogRetentionDays", 365);
+
+    /// <summary>Retention periods CloudWatch Logs accepts (0 = never expire is deliberately excluded)</summary>
+    public static readonly int[] CloudWatchRetentionDays =
+        [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653];
+
+    private int RetentionDays(string key, int defaultDays)
+    {
+        var days = _config.GetInt32(key) ?? defaultDays;
+        if (!CloudWatchRetentionDays.Contains(days))
+        {
+            throw new InvalidOperationException(
+                $"{key} must be one of the retention periods CloudWatch Logs accepts: "
+                + $"{string.Join(", ", CloudWatchRetentionDays)}; got {days}.");
+        }
+
+        return days;
+    }
+
     /// <summary>Whether to create RDS I/O alarms (default: enabled when SNS/email config is provided)</summary>
     public bool EnableRdsIoAlarms =>
         _config.GetBoolean("enableRdsIoAlarms")

@@ -228,6 +228,10 @@ config:
 
   # whispa:sentryDsn: https://xxx@sentry.io/xxx
 
+  # Log retention in days (must be a value CloudWatch Logs accepts, e.g. 30, 90, 365)
+  # whispa:logRetentionDays: "30"        # Backend and frontend logs
+  # whispa:flowLogRetentionDays: "365"   # VPC flow logs (connection metadata only)
+
   # Alerts: RDS I/O CloudWatch alarms, load balancer alarms and failed-deployment alerts
   # All are created automatically when you provide either an existing SNS topic
   # ARN or an email address. If only alarmEmailAddress is set, Pulumi creates an

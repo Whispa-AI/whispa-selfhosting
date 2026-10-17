@@ -9,8 +9,7 @@ namespace Whispa.Aws.Pulumi.Components;
 
 /// <summary>
 /// Creates CloudWatch monitoring infrastructure:
-/// - Log groups for ECS containers
-/// - Log retention policies
+/// - Log groups for ECS containers, kept for logRetentionDays
 /// - The alert topic (optional) shared by RDS alarms, load balancer alarms and deployment alerts
 /// - Optional RDS I/O alarms
 /// </summary>
@@ -38,14 +37,11 @@ public class MonitoringStack : ComponentResource
         ComponentResourceOptions? options = null)
         : base("whispa:monitoring:MonitoringStack", name, options)
     {
-        // Retention period based on environment
-        var retentionDays = config.IsProduction ? 30 : 7;
-
         // Backend log group
         var backendLogGroup = new LogGroup($"{name}-backend-logs", new LogGroupArgs
         {
             Name = $"/ecs/{config.ProjectName}/{config.Environment}/backend",
-            RetentionInDays = retentionDays,
+            RetentionInDays = config.LogRetentionDays,
             Tags = new InputMap<string>
             {
                 ["Name"] = config.ResourceName("backend-logs"),
@@ -62,7 +58,7 @@ public class MonitoringStack : ComponentResource
         var frontendLogGroup = new LogGroup($"{name}-frontend-logs", new LogGroupArgs
         {
             Name = $"/ecs/{config.ProjectName}/{config.Environment}/frontend",
-            RetentionInDays = retentionDays,
+            RetentionInDays = config.LogRetentionDays,
             Tags = new InputMap<string>
             {
                 ["Name"] = config.ResourceName("frontend-logs"),
