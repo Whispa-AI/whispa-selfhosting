@@ -408,6 +408,12 @@ public class WhispaConfig
         ?? (!string.IsNullOrWhiteSpace(AlarmSnsTopicArn)
             || !string.IsNullOrWhiteSpace(AlarmEmailAddress));
 
+    /// <summary>Whether to alarm on load balancer latency, 5XX errors and unhealthy targets (default: enabled when SNS/email config is provided)</summary>
+    public bool EnableLoadBalancerAlarms =>
+        _config.GetBoolean("enableLoadBalancerAlarms")
+        ?? (!string.IsNullOrWhiteSpace(AlarmSnsTopicArn)
+            || !string.IsNullOrWhiteSpace(AlarmEmailAddress));
+
     /// <summary>Existing SNS topic ARN for CloudWatch alarm notifications (optional)</summary>
     public string? AlarmSnsTopicArn => _config.Get("alarmSnsTopicArn");
 
