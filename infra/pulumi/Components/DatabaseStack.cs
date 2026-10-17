@@ -109,12 +109,12 @@ public class DatabaseStack : ComponentResource
             PerformanceInsightsRetentionPeriod = 7,
 
             // Deletion protection - disable for dev, enable for prod
-            DeletionProtection = config.Environment == "prod",
+            DeletionProtection = config.IsProduction,
 
             // Skip final snapshot for easier cleanup in dev
             // For prod: final snapshot identifier is static to avoid Pulumi drift on each run
-            SkipFinalSnapshot = config.Environment != "prod",
-            FinalSnapshotIdentifier = config.Environment == "prod"
+            SkipFinalSnapshot = !config.IsProduction,
+            FinalSnapshotIdentifier = config.IsProduction
                 ? config.ResourceName("final-snapshot")
                 : null,
 

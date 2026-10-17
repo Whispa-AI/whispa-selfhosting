@@ -96,10 +96,7 @@ public class ComputeStack : ComponentResource
             LoadBalancerType = "application",
             SecurityGroups = new[] { albSecurityGroupId },
             Subnets = publicSubnetIds,
-            // EndsWith, not equality: production environments are named like
-            // "cc-prod", so the old == "prod" comparison never matched and
-            // every prod ALB ran unprotected.
-            EnableDeletionProtection = config.Environment.EndsWith("prod"),
+            EnableDeletionProtection = config.IsProduction,
             Tags = new InputMap<string>
             {
                 ["Name"] = config.ResourceName("alb"),

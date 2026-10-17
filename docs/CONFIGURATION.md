@@ -44,6 +44,8 @@ Control how AWS resources are named:
 - If `resourcePrefix` is set: `{resourcePrefix}-{resourceType}` (e.g., `acme-prod-alb`)
 - If not set: `{projectName}-{environment}-{resourceType}` (e.g., `whispa-prod-alb`)
 
+**Production environments:** an environment whose name ends in `prod` (e.g., `prod`, `acme-prod`) is treated as production: the database and load balancer get deletion protection, and deleting the database takes a final snapshot first. This uses `whispa:environment` (the stack name by default), not `resourcePrefix`.
+
 ## Networking
 
 | Key | Default | Description |
