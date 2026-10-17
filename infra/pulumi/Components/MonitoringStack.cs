@@ -11,7 +11,7 @@ namespace Whispa.Aws.Pulumi.Components;
 /// Creates CloudWatch monitoring infrastructure:
 /// - Log groups for ECS containers
 /// - Log retention policies
-/// - The alert topic (optional) shared by RDS alarms and deployment alerts
+/// - The alert topic (optional) shared by RDS alarms, load balancer alarms and deployment alerts
 /// - Optional RDS I/O alarms
 /// </summary>
 public class MonitoringStack : ComponentResource
@@ -83,7 +83,7 @@ public class MonitoringStack : ComponentResource
 
     private Output<string>? ConfigureAlertTopic(string name, WhispaConfig config)
     {
-        if (!config.EnableRdsIoAlarms && !config.EnableDeploymentAlerts)
+        if (!config.EnableRdsIoAlarms && !config.EnableDeploymentAlerts && !config.EnableLoadBalancerAlarms)
         {
             return null;
         }
@@ -91,7 +91,7 @@ public class MonitoringStack : ComponentResource
         if (string.IsNullOrWhiteSpace(config.AlarmSnsTopicArn) && string.IsNullOrWhiteSpace(config.AlarmEmailAddress))
         {
             throw new InvalidOperationException(
-                "enableRdsIoAlarms and enableDeploymentAlerts require either alarmSnsTopicArn or alarmEmailAddress to be configured.");
+                "enableRdsIoAlarms, enableDeploymentAlerts and enableLoadBalancerAlarms require either alarmSnsTopicArn or alarmEmailAddress to be configured.");
         }
 
         Output<string> alarmTopicArn;
@@ -475,23 +475,18 @@ public class MonitoringStack : ComponentResource
         string comparisonOperator = "GreaterThanThreshold",
         string statistic = "Average")
     {
-        _ = new MetricAlarm(resourceName, new MetricAlarmArgs
-        {
-            Name = alarmName,
-            ComparisonOperator = comparisonOperator,
-            EvaluationPeriods = 2,
-            MetricName = metricName,
-            Namespace = "AWS/RDS",
-            Period = 300,
-            Statistic = statistic,
-            Threshold = threshold,
-            AlarmDescription = description,
-            AlarmActions = new InputList<string> { alarmTopicArn },
-            Dimensions = new InputMap<string>
-            {
-                [dimensionName] = dimensionValue,
-            },
-            Tags = tags,
-        }, new CustomResourceOptions { Parent = this });
+        MetricAlarms.Create(
+            this,
+            resourceName,
+            alarmName,
+            "AWS/RDS",
+            metricName,
+            new InputMap<string> { [dimensionName] = dimensionValue },
+            threshold,
+            description,
+            tags,
+            alarmTopicArn,
+            comparisonOperator,
+            statistic);
     }
 }

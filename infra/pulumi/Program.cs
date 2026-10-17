@@ -121,6 +121,19 @@ return await Deployment.RunAsync(() =>
             frontendServiceArn: compute.FrontendServiceArn);
     }
 
+    // Alert on slow responses, 5XX errors and unhealthy targets at the ALB.
+    if (config.EnableLoadBalancerAlarms && monitoring.AlertTopicArn is not null)
+    {
+        _ = new LoadBalancerAlarmsStack("load-balancer-alarms", config,
+            alertTopicArn: monitoring.AlertTopicArn,
+            loadBalancerArnSuffix: compute.AlbArnSuffix,
+            targetGroupArnSuffixes: new Dictionary<string, Output<string>>
+            {
+                ["backend"] = compute.BackendTargetGroupArnSuffix,
+                ["frontend"] = compute.FrontendTargetGroupArnSuffix,
+            });
+    }
+
     // ===================
     // Phase 5: DNS (Optional)
     // ===================

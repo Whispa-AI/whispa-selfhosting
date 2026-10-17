@@ -39,6 +39,15 @@ public class ComputeStack : ComponentResource
     /// <summary>Frontend ECS service ARN</summary>
     public Output<string> FrontendServiceArn { get; }
 
+    /// <summary>ALB ARN suffix, the LoadBalancer dimension of its CloudWatch metrics</summary>
+    public Output<string> AlbArnSuffix { get; }
+
+    /// <summary>Backend target group ARN suffix, the TargetGroup dimension of its CloudWatch metrics</summary>
+    public Output<string> BackendTargetGroupArnSuffix { get; }
+
+    /// <summary>Frontend target group ARN suffix, the TargetGroup dimension of its CloudWatch metrics</summary>
+    public Output<string> FrontendTargetGroupArnSuffix { get; }
+
     public ComputeStack(
         string name,
         WhispaConfig config,
@@ -110,6 +119,7 @@ public class ComputeStack : ComponentResource
 
         AlbDnsName = alb.DnsName;
         AlbZoneId = alb.ZoneId;
+        AlbArnSuffix = alb.ArnSuffix;
 
         // Backend target group
         // AWS Target Group names must be <= 32 chars and unique per region
@@ -144,6 +154,8 @@ public class ComputeStack : ComponentResource
             },
         }, new CustomResourceOptions { Parent = this });
 
+        BackendTargetGroupArnSuffix = backendTg.ArnSuffix;
+
         // Frontend target group
         var frontendTgName = TruncateTargetGroupName(config.ProjectName, config.Environment, "fe");
         var frontendTg = new TargetGroup($"{name}-frontend-tg", new TargetGroupArgs
@@ -172,6 +184,8 @@ public class ComputeStack : ComponentResource
                 ["Name"] = config.ResourceName("frontend-tg"),
             },
         }, new CustomResourceOptions { Parent = this });
+
+        FrontendTargetGroupArnSuffix = frontendTg.ArnSuffix;
 
         // HTTP listener - redirect to HTTPS
         new Listener($"{name}-http-listener", new ListenerArgs
