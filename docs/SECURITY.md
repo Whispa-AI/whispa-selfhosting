@@ -28,7 +28,7 @@ Internet → ALB (public) → ECS Tasks (private) → RDS (private)
 ### Encryption
 
 **In Transit**:
-- All external traffic uses TLS 1.2+
+- All external traffic uses TLS 1.2+ (ALB policy `ELBSecurityPolicy-TLS13-1-2-Res-2021-06`: TLS 1.2 limited to forward-secret AES-GCM ciphers)
 - ALB terminates SSL with ACM certificates
 - Internal traffic uses HTTPS between services
 
