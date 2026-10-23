@@ -15,4 +15,16 @@
     <PackageReference Include="Pulumi.Random" Version="4.19.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Build the rollout gate (see ComputeStack.WaitForRollout) once, with this
+         program and before it runs, rather than in every rollout command: the
+         frontend and backend rollouts run at the same time with
+         whispa:parallelRollouts, and two builds of one project collide on its
+         output files. Release, the configuration the commands run. -->
+    <ProjectReference Include="../rollout-gate/RolloutGate.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SetConfiguration="Configuration=Release" />
+  </ItemGroup>
+
 </Project>
