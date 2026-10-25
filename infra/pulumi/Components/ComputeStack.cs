@@ -718,6 +718,8 @@ public class ComputeStack : ComponentResource
     /// success (see infra/rollout-gate). Re-runs whenever the task definition
     /// changes. A .NET tool, so it runs wherever this program does (including
     /// Windows CI) with no shell or AWS CLI; it uses the same AWS credentials.
+    /// Built with this program (see Whispa.Aws.Pulumi.csproj), so the command
+    /// only runs it: parallel rollouts would otherwise build it twice at once.
     /// </summary>
     private Command WaitForRollout(
         string name, WhispaConfig config, Cluster cluster, Service service, TaskDefinition taskDefinition)
@@ -732,7 +734,7 @@ public class ComputeStack : ComponentResource
             // under sh or cmd.exe depending on the OS, and ARNs and names have
             // no spaces to quote.
             Create = Output.Format(
-                $"dotnet run --project ../rollout-gate -c Release -v q -- {cluster.Name} {service.Name} {taskDefinition.Arn}"),
+                $"dotnet run --project ../rollout-gate -c Release --no-build -v q -- {cluster.Name} {service.Name} {taskDefinition.Arn}"),
             Environment = environment,
         }, new CustomResourceOptions { Parent = this, DependsOn = { service } });
     }
