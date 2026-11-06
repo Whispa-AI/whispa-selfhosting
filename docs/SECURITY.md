@@ -179,7 +179,7 @@ aws cloudtrail create-trail \
 If you discover a security vulnerability in Whispa:
 
 1. **Do not** open a public GitHub issue
-2. Email security@whispa.ai with details
+2. Email security@whispa.net with details
 3. We'll respond within 48 hours
 4. We follow responsible disclosure practices
 
@@ -192,13 +192,19 @@ Subscribe to security updates:
 
 ## Third-Party Services
 
-Whispa integrates with external services:
+Whispa sends data to an external service only when your configuration selects it. Everything else, including the database, call storage and the self-hosted AssemblyAI speech server, stays in your AWS account.
 
-| Service | Data Sent | Security Notes |
-|---------|-----------|----------------|
-| OpenRouter | Transcripts for analysis | Data processed, not stored |
-| Deepgram | Audio for transcription | SOC 2 Type II certified |
-| ElevenLabs | Audio for transcription | Check their privacy policy |
-| Sentry | Error reports | No PII sent |
+| Service | Used when | Data sent |
+|---------|-----------|-----------|
+| Amazon Bedrock | Default for post-call analysis and the voice agent, in your AWS account and region | Transcripts and call context. A `global.` or other cross-region model ID may be served outside your region |
+| SCX.ai | `AI_CALL_LLM_MODEL` is an `scx/…` model | Voice-agent conversation. Hosting location depends on the model; confirm it with SCX.ai |
+| Google Cloud Vertex AI | A `vertex/…` model is selected, as the voice agent's model or its backup | Voice-agent conversation, processed in the endpoint's region |
+| OpenRouter | An `openrouter/…` model is selected | Conversation or transcripts, forwarded to the hosts in `OPENROUTER_PROVIDER_ORDER` |
+| Deepgram | `AI_CALL_STT_PROVIDER=deepgram` | Caller audio on voice-agent calls |
+| AssemblyAI cloud | Transcription points at AssemblyAI's cloud API instead of a self-hosted server | Call audio |
+| Cartesia | Voice agent speech (`CARTESIA_API_KEY`) | The text the agent speaks |
+| ElevenLabs | Training calls, or ElevenLabs batch transcription | Training-call audio, or call audio |
+| Twilio | SMS or Twilio Voice is configured | Phone numbers, message text, call audio |
+| Sentry | `SENTRY_DSN` is set | Error events. Names, phone numbers and call content are scrubbed before sending |
 
-Review each service's security practices for your compliance needs.
+Review each provider's data-retention and hosting terms for your compliance needs, and record the ones you enable as subprocessors.
