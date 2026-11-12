@@ -211,7 +211,8 @@ public class ComputeStack : ComponentResource
             LoadBalancerArn = alb.Arn,
             Port = 443,
             Protocol = "HTTPS",
-            SslPolicy = "ELBSecurityPolicy-TLS13-1-2-2021-06",
+            // TLS 1.2 limited to AEAD suites (no CBC), plus hybrid post-quantum key exchange.
+            SslPolicy = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09",
             CertificateArn = certificateArn,
             DefaultActions = new[]
             {

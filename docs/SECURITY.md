@@ -28,7 +28,7 @@ Internet → ALB (public) → ECS Tasks (private) → RDS (private)
 ### Encryption
 
 **In Transit**:
-- All external traffic uses TLS 1.2+
+- All external traffic uses TLS 1.2+ (TLS 1.2 limited to AEAD cipher suites, with hybrid post-quantum key exchange for clients that support it)
 - ALB terminates SSL with ACM certificates
 - Internal traffic uses HTTPS between services
 
