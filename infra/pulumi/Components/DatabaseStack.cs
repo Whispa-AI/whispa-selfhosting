@@ -10,7 +10,7 @@ namespace Whispa.Aws.Pulumi.Components;
 /// Creates RDS PostgreSQL database:
 /// - DB subnet group (private subnets)
 /// - RDS PostgreSQL 17 instance
-/// - Parameter group for PostgreSQL tuning
+/// - Parameter group for PostgreSQL tuning and pgaudit audit logging
 ///
 /// The database is placed in private subnets and only accessible from ECS tasks.
 /// </summary>
@@ -66,6 +66,20 @@ public class DatabaseStack : ComponentResource
                 {
                     Name = "idle_in_transaction_session_timeout",
                     Value = "60000",  // 60 seconds
+                },
+                // Audit logging: pgaudit records schema and role/permission changes in the
+                // PostgreSQL log. Loading the library is static, so it takes effect after the
+                // next reboot of the instance.
+                new ParameterGroupParameterArgs
+                {
+                    Name = "shared_preload_libraries",
+                    Value = "pg_stat_statements,pgaudit",
+                    ApplyMethod = "pending-reboot",
+                },
+                new ParameterGroupParameterArgs
+                {
+                    Name = "pgaudit.log",
+                    Value = "ddl,role",
                 },
             },
             Tags = new InputMap<string>
