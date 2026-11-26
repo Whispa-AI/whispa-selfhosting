@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Pull-request CI (`.github/workflows/ci.yml`): restores, builds and unit-tests
+  the Pulumi program and the rollout gate on every pull request and push to
+  `main`. It needs no cloud credentials and runs no `pulumi preview`.
+
 ## [0.0.211] - 2026-11-25
 
 ## [0.0.210] - 2026-11-25
