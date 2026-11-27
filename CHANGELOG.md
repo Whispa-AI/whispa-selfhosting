@@ -11,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- The example deploy workflow moved from a commented-out
+  `.github/workflows/deploy.yml` to `examples/github-actions/deploy.yml`, so it
+  no longer registers a failing run on every push. Enable it by copying it to
+  `.github/workflows/deploy.yml` (see [docs/CI-CD.md](docs/CI-CD.md)).
+
 ## [0.0.216] - 2026-11-27
 
 ## [0.0.215] - 2026-11-27
