@@ -2,7 +2,8 @@ name: CI
 
 # Builds the Pulumi program and the rollout gate and runs their unit tests on
 # every pull request and on main. Nothing here talks to AWS or Pulumi Cloud:
-# `pulumi preview` needs a stack's credentials, so deploys stay in deploy.yml.
+# `pulumi preview` needs a stack's credentials, so deploys stay in
+# examples/github-actions/deploy.yml.
 
 on:
   push:

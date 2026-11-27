@@ -2,8 +2,8 @@
 # Whispa stack config — DEV environment (template)
 # =============================================================================
 #
-# Used by the "Deploy Whispa" GitHub Action (.github/workflows/deploy.yml), which
-# copies this file to infra/pulumi/Pulumi.dev.yaml at deploy time.
+# Used by the "Deploy Whispa" GitHub Action (examples/github-actions/deploy.yml),
+# which copies this file to infra/pulumi/Pulumi.dev.yaml at deploy time.
 #
 # Setup (do this once, in your PRIVATE deployment repo):
 #   1. cp stacks/dev.yaml.example stacks/dev.yaml
